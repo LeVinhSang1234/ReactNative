@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Dimensions,
   NativeEventEmitter,
+  ViewStyle,
 } from 'react-native';
 
 const form: any = {
@@ -95,25 +96,36 @@ const styles = StyleSheet.create({
 
 interface IPropsItem {
   children?: any;
+  defaultValue?: any;
   name: string;
   onParseField?: (v?: any, callback?: any) => any;
   onChange?: (v: any, name: string) => any;
   value?: any;
   onPress?: (v?: any, key?: any) => any;
   rule?: {
-    [key: string]: any;
+    whitespace?: boolean;
+    required?: boolean;
+    message?: any;
     validator?: (v: any, callback: (v?: any) => any) => any;
   };
   validateFirst?: (v?: any) => any;
   onValueChange?: (v?: any, key?: string) => any;
   onChangeText?: (v?: any, name?: string) => any;
   onChangeInput?: (v?: any, key?: any) => any;
-  parseValue?: (v?: any, key?: any) => any;
   label?: any;
   colon?: string;
   dotRequired?: string;
   renderDot?: (v?: any) => any;
-  formItemLayout?: any;
+  formItemLayout?: {
+    labelCol: {
+      xs: number;
+      sm: number;
+    };
+    wrapperCol: {
+      xs: number;
+      sm: number;
+    };
+  };
 }
 
 export const Item = (props: IPropsItem) => {
@@ -134,25 +146,26 @@ export const Item = (props: IPropsItem) => {
     renderDot,
     formItemLayout,
     onChangeInput,
-    parseValue,
+    defaultValue,
   } = props;
   const [valueState, setValue] = useState({value, error: null});
 
   useEffect(() => {
     if (name && onParseField) {
-      onParseField(name, parseValue);
-      form.ref[name] = (val: string | undefined = undefined, error: string) => {
-        if (onChangeInput) onChangeInput(val);
+      onParseField(name, defaultValue);
+      form.ref[name] = (
+        val: string | undefined = undefined,
+        error: string,
+        detectValidate?: boolean,
+      ) => {
+        if (!detectValidate && onChangeInput) onChangeInput(val);
         form.touched[name] = true;
-        if (typeof parseValue === 'function') {
-          val = parseValue(val);
-        }
         const newValue = {...value, value: val};
         let v = val;
         if (rule.whitespace && v) {
           v = v.trim();
         }
-        if (error !== undefined) {
+        if (error) {
           newValue.error = error;
         } else if (rule.required && !v) {
           if (rule.message) {
@@ -246,10 +259,10 @@ export const Item = (props: IPropsItem) => {
   );
 
   if (label && formItemLayout) {
-    const {labelCol = {}, wrapperCol = {}} = formItemLayout;
+    const {labelCol, wrapperCol} = formItemLayout;
     const width = Dimensions.get('window').width;
-    const {xs = labelCol, sm = labelCol} = labelCol;
-    const {xs: xsWrap, sm: smWrap} = wrapperCol;
+    const {xs = 12, sm = 12} = labelCol;
+    const {xs: xsWrap = 12, sm: smWrap = 12} = wrapperCol;
     let widthSpan = width > 320 ? (sm / 12) * 100 : (xs / 12) * 100;
     if (widthSpan > 100) {
       widthSpan = 100;
@@ -297,16 +310,47 @@ export const Item = (props: IPropsItem) => {
   );
 };
 
-const Form = (props: any) => {
-  const {initialValues = {}, children, validateFirst, renderDot} = props;
+interface IPropsForm {
+  initialValues?: {
+    [key: string]: any;
+  };
+  children: any;
+  validateFirst?: (v?: any) => any;
+  renderDot?: (v?: any) => any;
+  style?: ViewStyle;
+  colon?: boolean;
+  formItemLayout?: {
+    labelCol: {
+      xs: number;
+      sm: number;
+    };
+    wrapperCol: {
+      xs: number;
+      sm: number;
+    };
+  };
+  dotRequired?: 'before' | 'after';
+}
+
+const Form = (props: IPropsForm) => {
+  const {
+    initialValues = {},
+    children,
+    validateFirst,
+    renderDot,
+    style,
+    colon,
+    formItemLayout,
+    dotRequired,
+  } = props;
   useMemo(() => {
     handle.onChange = onChange;
     handle.onValueChange = onChange;
     handle.onParseField = onParseField;
     handle.onPress = onPress;
-    handle.colon = props.colon;
-    handle.formItemLayout = props.formItemLayout;
-    handle.dotRequired = props.dotRequired || 'before';
+    handle.colon = colon;
+    handle.formItemLayout = formItemLayout;
+    handle.dotRequired = dotRequired || 'before';
     handle.renderDot = renderDot;
     handleForm.setFieldsValue = setFieldsValue;
     handleForm.setFieldValue = setFieldValue;
@@ -334,13 +378,11 @@ const Form = (props: any) => {
     };
   }, []);
 
-  function onParseField(name: string, parseValue: any) {
-    if (!initialValues[name]) {
-      let val = undefined;
-      if (typeof parseValue === 'function') {
-        val = parseValue(val);
-      }
-      form.value[name] = val;
+  function onParseField(name: string, value?: any) {
+    if (value !== undefined) {
+      form.value[name] = value;
+    } else if (!initialValues[name]) {
+      form.value[name] = undefined;
     }
   }
 
@@ -376,6 +418,7 @@ const Form = (props: any) => {
     Object.keys(value).forEach(key => {
       listInterval[key] = setInterval(() => {
         if (typeof form.ref[key] === 'function') {
+          form.value[key] = value;
           onChange(value[key], key, errors[key]);
           clearInterval(listInterval[key]);
           delete listInterval[key];
@@ -389,6 +432,7 @@ const Form = (props: any) => {
     value: any,
     error: string | undefined | ReactChild,
   ) {
+    form.value[key] = value;
     if (typeof form.ref[key] === 'function') {
       form.ref[key](value, error);
     }
@@ -407,7 +451,7 @@ const Form = (props: any) => {
   ) {
     Object.keys(form.value).forEach(key => {
       if (typeof form.ref[key] === 'function') {
-        form.ref[key](form.value[key]);
+        form.ref[key](form.value[key], undefined, true);
       }
     });
     let errorArr: {[key: string]: any}[] | undefined = Object.keys(errors).map(
@@ -426,7 +470,7 @@ const Form = (props: any) => {
   if (!Object.keys(handle).length) {
     return null;
   }
-  return children;
+  return <View style={{flex: 1, ...style}}>{children}</View>;
 };
 
 Form.useForm = () => {
@@ -443,7 +487,7 @@ Form.Item = (props: IPropsItem) => {
     onChangeInput: props.onChange,
     onParseField: handle.onParseField,
     onPress: handle.onPress,
-    value: form[props.name],
+    value: form[props.name] || props.defaultValue,
     validateFirst: form.validateFirst,
     colon: handle.colon,
     dotRequired: handle.dotRequired,
