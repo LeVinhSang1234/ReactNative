@@ -13,4 +13,5 @@ export default {
   windowHeight: height + navbarHeight,
   concatHeight: h => height + h,
   isPad: Platform.isPad,
+  isTouch: deviceInfoModule.hasNotch(),
 };

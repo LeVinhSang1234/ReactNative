@@ -1,11 +1,14 @@
 import React, {Component, Fragment} from 'react';
-import {StyleSheet, TouchableNativeFeedback, View} from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import IconAnt from 'react-native-vector-icons/AntDesign';
+import {
+  Keyboard,
+  StyleSheet,
+  TouchableNativeFeedback,
+  View,
+} from 'react-native';
 import KeyboardListener from '@/lib/KeyboardListener';
 import {unMount} from '@/utils';
-import ImageSvg from '@/assets/img/image_svg.svg';
-import {SvgXml} from 'react-native-svg';
+import IconIon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 interface IProps {
   selectionColor: string;
@@ -84,30 +87,40 @@ class Extension extends Component<IProps, IState> {
     this.setState({detectClick: true});
   };
 
+  onOpenCamera = () => {
+    const {onOpenCamera} = this.props;
+    Keyboard.dismiss();
+    onOpenCamera?.();
+  };
+
   render() {
-    const {selectionColor, onOpenCamera} = this.props;
+    const {selectionColor} = this.props;
     const {showKeyboard, detectClick} = this.state;
     const marginRight = showKeyboard && detectClick ? 2 : 6;
     const marginLeft = showKeyboard && detectClick ? 0 : -5;
     return (
       <Fragment>
-        <TouchableNativeFeedback onPress={onOpenCamera}>
+        <TouchableNativeFeedback onPress={this.onOpenCamera}>
           <View style={[styles.buttonExtend]}>
-            <Icon name="camera" size={24} color={selectionColor} />
+            <Icon name="camera" size={26} color={selectionColor} />
           </View>
         </TouchableNativeFeedback>
         <TouchableNativeFeedback>
-          <View style={[styles.buttonExtend, styles.imageSend]}>
-            <SvgXml xml={ImageSvg} fill={selectionColor} />
+          <View style={[styles.buttonExtend]}>
+            <IconIon name="image" size={30} color={selectionColor} />
           </View>
         </TouchableNativeFeedback>
         <TouchableNativeFeedback
           onPress={() => this.handleClickIcon(TypeIconRecord)}>
           <View style={[styles.buttonExtend, {marginRight, marginLeft}]}>
             {showKeyboard && detectClick ? (
-              <IconAnt name="right" size={23} color={selectionColor} />
+              <IconIon
+                name="chevron-forward-outline"
+                size={28}
+                color={selectionColor}
+              />
             ) : (
-              <Icon name={'microphone'} size={23} color={selectionColor} />
+              <IconIon name="mic" size={28} color={selectionColor} />
             )}
           </View>
         </TouchableNativeFeedback>
@@ -122,13 +135,10 @@ class Extension extends Component<IProps, IState> {
 
 const styles = StyleSheet.create({
   buttonExtend: {
-    width: 30,
-    height: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imageSend: {width: 27, height: 27, marginBottom: 0.5},
 });
 
 export default Extension;
