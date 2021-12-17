@@ -7,12 +7,18 @@ import {
   Dimensions,
   Easing,
   GestureResponderEvent,
+  LayoutAnimation,
+  Platform,
+  Pressable,
   StatusBar,
   StyleSheet,
   TouchableNativeFeedback,
   View,
 } from 'react-native';
-import {CameraType, RNCamera} from 'react-native-camera';
+import {CameraType, FlashMode, RNCamera} from 'react-native-camera';
+import IconIon from 'react-native-vector-icons/Ionicons';
+import Text from '../Text';
+import Zoom from '../ZoomView';
 
 interface IProps {}
 
@@ -22,61 +28,110 @@ interface IState {
   xPoint: number;
   yPoint: number;
   cameraReady: boolean;
+  flashMode: keyof FlashMode;
+  zoom: number;
+  exposure: number;
 }
 
 const backgroundColorPoint = 'yellow';
+const backgroundButtonCapture = 'rgba(174,174,174,0.8)';
 
 class Camera extends Component<IProps, IState> {
-  animatedOpacity: Animated.Value;
   camera?: RNCamera | null;
   timeout?: NodeJS.Timeout;
   animatedOpacityPoint: Animated.Value;
   animatedOpacityPointXY: Animated.ValueXY;
+  isZoom: boolean;
+
   constructor(props: IProps) {
     super(props);
-    this.animatedOpacity = new Animated.Value(0);
     this.animatedOpacityPoint = new Animated.Value(0);
     this.animatedOpacityPointXY = new Animated.ValueXY({x: 0, y: 0});
+    this.isZoom = false;
     this.state = {
       open: false,
       typeCamera: RNCamera.Constants.Type.back,
       xPoint: 0.5,
       yPoint: 0.5,
       cameraReady: false,
+      flashMode: RNCamera.Constants.FlashMode.auto,
+      zoom: 0,
+      exposure: -1,
     };
   }
 
   open = () => {
-    StatusBar.setBarStyle('light-content', true);
+    StatusBar.setHidden(true);
     this.setState({open: true});
-    Animated.spring(this.animatedOpacity, {
-      toValue: 1,
+  };
+
+  close = () => {
+    StatusBar.setHidden(false);
+    Animated.timing(this.animatedOpacityPoint, {
+      toValue: 0,
       useNativeDriver: false,
-      bounciness: 0,
-      overshootClamping: true,
+      duration: 0,
     }).start();
+    this.setState({open: false, zoom: 0});
+  };
+
+  handleChangeFlash = () => {
+    const {flashMode} = this.state;
+    let flash;
+    if (flashMode === RNCamera.Constants.FlashMode.off) {
+      flash = RNCamera.Constants.FlashMode.auto;
+    } else if (flashMode === RNCamera.Constants.FlashMode.on) {
+      flash = RNCamera.Constants.FlashMode.off;
+    } else {
+      flash = RNCamera.Constants.FlashMode.on;
+    }
+    this.setState({flashMode: flash});
+  };
+
+  renderNameFlash = () => {
+    const {flashMode} = this.state;
+    if (flashMode !== RNCamera.Constants.FlashMode.off) {
+      return 'ios-flash';
+    }
+    return 'ios-flash-off';
+  };
+
+  handleChangeType = () => {
+    const {typeCamera} = this.state;
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        260,
+        Platform.OS === 'ios'
+          ? LayoutAnimation.Types.keyboard
+          : LayoutAnimation.Types.linear,
+        LayoutAnimation.Properties.scaleXY,
+      ),
+    );
+    if (typeCamera === RNCamera.Constants.Type.back) {
+      this.setState({
+        typeCamera: RNCamera.Constants.Type.front,
+        cameraReady: false,
+      });
+    } else {
+      this.setState({
+        typeCamera: RNCamera.Constants.Type.back,
+        xPoint: 0.5,
+        yPoint: 0.5,
+        cameraReady: false,
+      });
+    }
   };
 
   handlePress = ({nativeEvent}: GestureResponderEvent) => {
+    if (this.isZoom) {
+      this.isZoom = false;
+      return;
+    }
     const {pageX, pageY} = nativeEvent;
     if (this.timeout) {
       clearTimeout(this.timeout);
       this.timeout = undefined;
-      const {typeCamera} = this.state;
-      if (typeCamera === RNCamera.Constants.Type.back) {
-        this.setState({
-          typeCamera: RNCamera.Constants.Type.front,
-          cameraReady: false,
-        });
-      } else {
-        this.setState({
-          typeCamera: RNCamera.Constants.Type.back,
-          xPoint: 0.5,
-          yPoint: 0.5,
-          cameraReady: false,
-        });
-      }
-      return;
+      return this.handleChangeType();
     }
     const {typeCamera} = this.state;
     this.timeout = setTimeout(() => {
@@ -120,34 +175,55 @@ class Camera extends Component<IProps, IState> {
       this.setState({
         xPoint: Number((pageY / Dimensions.get('window').height).toFixed(1)),
         yPoint: 1 - Number((pageX / Dimensions.get('window').width).toFixed(1)),
+        exposure: -1,
       });
     }, 250);
   };
 
-  render(): ReactNode {
-    const {open, typeCamera, xPoint, yPoint, cameraReady} = this.state;
-    if (!open) return <GlobalScreen />;
+  handleZoom = (zoom: number, _touchs: number) => {
+    this.isZoom = true;
+    const {zoom: zoomState} = this.state;
+    if (zoom !== zoomState) {
+      this.setState({zoom});
+    }
+  };
 
+  render(): ReactNode {
+    const {
+      open,
+      typeCamera,
+      xPoint,
+      yPoint,
+      cameraReady,
+      flashMode,
+      zoom,
+      exposure,
+    } = this.state;
+    if (!open) return <GlobalScreen />;
     const {width, height} = appConnect;
     const scaleXY = this.animatedOpacityPoint.interpolate({
       inputRange: [0, 1],
       outputRange: [1.2, 1],
     });
+    const checkFront = typeCamera === RNCamera.Constants.Type.front;
+    const left = width / 2 - (checkFront ? 15 : 40);
     return (
       <TouchableNativeFeedback onPress={this.handlePress}>
-        <Animated.View
-          style={[styles.view, {width, height, opacity: this.animatedOpacity}]}>
+        <Zoom.Animated
+          pointerAvailable={2}
+          onZoom={this.handleZoom}
+          style={[styles.view, {width, height}]}>
           <RNCamera
+            exposure={exposure}
+            zoom={zoom}
             autoFocus={RNCamera.Constants.AutoFocus.off}
             autoFocusPointOfInterest={
-              typeCamera === RNCamera.Constants.Type.front || !cameraReady
-                ? undefined
-                : {x: xPoint, y: yPoint}
+              checkFront || !cameraReady ? undefined : {x: xPoint, y: yPoint}
             }
             style={{width: width, height: height}}
             ref={ref => (this.camera = ref)}
             type={typeCamera}
-            flashMode={RNCamera.Constants.FlashMode.on}
+            flashMode={flashMode}
             onCameraReady={() => {
               this.setState({cameraReady: true});
             }}
@@ -168,7 +244,41 @@ class Camera extends Component<IProps, IState> {
               <View style={styles.pointLineRight} />
             </View>
           </Animated.View>
-        </Animated.View>
+          <TouchableNativeFeedback onPress={this.close}>
+            <View style={styles.iconClose}>
+              <IconIon name="ios-close" size={30} color="#fff" />
+            </View>
+          </TouchableNativeFeedback>
+          <View style={[styles.iconChangeCamera, {left}]}>
+            <View style={styles.flash}>
+              <Pressable onPress={this.handleChangeType}>
+                <View style={styles.viewCameraReverse}>
+                  <IconIon name="ios-camera-reverse" size={30} color="#fff" />
+                </View>
+              </Pressable>
+              {checkFront ? null : (
+                <Pressable onPress={this.handleChangeFlash}>
+                  <View style={styles.viewCameraReverse}>
+                    <View style={[styles.mt2]}>
+                      <IconIon
+                        name={this.renderNameFlash()}
+                        size={24}
+                        color="#fff"
+                      />
+                    </View>
+                    {flashMode === RNCamera.Constants.FlashMode.auto ? (
+                      <Text style={styles.textAFlash}>A</Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              )}
+            </View>
+          </View>
+          <View style={[styles.previewImage]}>{/* <Image */}</View>
+          <View style={[styles.capture, {left: width / 2 - 33}]}>
+            <View style={styles.captureWhite} />
+          </View>
+        </Zoom.Animated>
       </TouchableNativeFeedback>
     );
   }
@@ -188,6 +298,7 @@ const styles = StyleSheet.create({
     height: 90,
     borderWidth: 1,
     borderColor: backgroundColorPoint,
+    zIndex: 1,
   },
   relative: {
     position: 'relative',
@@ -225,6 +336,77 @@ const styles = StyleSheet.create({
     backgroundColor: backgroundColorPoint,
     right: 0,
     top: '50%',
+  },
+  iconClose: {
+    position: 'absolute',
+    top: bar.isTouch ? bar.concatHeight(10) : 10,
+    left: 15,
+    zIndex: 2,
+    width: 30,
+    height: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2.5,
+  },
+  iconChangeCamera: {
+    position: 'absolute',
+    top: bar.isTouch ? bar.concatHeight(10) : 13,
+    zIndex: 2,
+    width: 100,
+    height: 30,
+    flexDirection: 'row',
+  },
+  flash: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    position: 'relative',
+  },
+  textAFlash: {
+    position: 'absolute',
+    bottom: 4,
+    right: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  viewCameraReverse: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: 40,
+    height: 40,
+  },
+  mt2: {
+    marginTop: 2,
+  },
+  capture: {
+    backgroundColor: backgroundButtonCapture,
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+    zIndex: 1,
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    bottom: bar.navbarHeight + 30,
+  },
+  captureWhite: {
+    width: 55,
+    height: 55,
+    borderRadius: 50,
+    backgroundColor: '#ffffff',
+  },
+  previewImage: {
+    width: 35,
+    height: 35,
+    borderRadius: 8,
+    position: 'absolute',
+    bottom: bar.navbarHeight + 48,
+    left: 30,
+    backgroundColor: '#fff',
   },
 });
 
