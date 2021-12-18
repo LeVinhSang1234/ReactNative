@@ -1,3 +1,4 @@
+import {convertUri, throwException} from '@/utils';
 import bar from '@/utils/bar';
 import GlobalScreen, {appConnect} from '@/utils/globalScreen';
 import {dark} from '@/utils/variables';
@@ -7,6 +8,7 @@ import {
   Dimensions,
   Easing,
   GestureResponderEvent,
+  Image,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -31,6 +33,7 @@ interface IState {
   flashMode: keyof FlashMode;
   zoom: number;
   exposure: number;
+  image: any;
 }
 
 const backgroundColorPoint = 'yellow';
@@ -57,6 +60,7 @@ class Camera extends Component<IProps, IState> {
       flashMode: RNCamera.Constants.FlashMode.auto,
       zoom: 0,
       exposure: -1,
+      image: undefined,
     };
   }
 
@@ -72,7 +76,7 @@ class Camera extends Component<IProps, IState> {
       useNativeDriver: false,
       duration: 0,
     }).start();
-    this.setState({open: false, zoom: 0});
+    this.setState({open: false, zoom: 0, image: undefined});
   };
 
   handleChangeFlash = () => {
@@ -145,8 +149,8 @@ class Camera extends Component<IProps, IState> {
         toValue: 0,
         useNativeDriver: false,
         duration: 0,
-      }).start(({finished}) => {
-        if (finished) {
+      }).start(({finished: f}) => {
+        if (f) {
           Animated.parallel([
             Animated.timing(this.animatedOpacityPointXY, {
               toValue: {x, y},
@@ -188,6 +192,48 @@ class Camera extends Component<IProps, IState> {
     }
   };
 
+  rotateImage = (exifOrientation: number) => {
+    console.log(exifOrientation);
+    let degRotation;
+    switch (exifOrientation) {
+      case 3:
+        degRotation = '360deg';
+        break;
+      case 4:
+        degRotation = '180deg';
+        break;
+      case 5:
+        degRotation = '90deg';
+        break;
+      case 6:
+        degRotation = '90deg';
+        break;
+      case 7:
+        degRotation = '270deg';
+        break;
+      case 8:
+        degRotation = '270deg';
+        break;
+      default:
+        degRotation = '0deg';
+    }
+    return degRotation;
+  };
+
+  takePicture = async () => {
+    if (this.camera) {
+      try {
+        const data = await this.camera.takePictureAsync({
+          quality: 0,
+          imageType: 'jpeg',
+        });
+        this.setState({image: data});
+      } catch (e) {
+        throwException(e);
+      }
+    }
+  };
+
   render(): ReactNode {
     const {
       open,
@@ -198,8 +244,11 @@ class Camera extends Component<IProps, IState> {
       flashMode,
       zoom,
       exposure,
+      image,
     } = this.state;
-    if (!open) return <GlobalScreen />;
+    if (!open) {
+      return <GlobalScreen />;
+    }
     const {width, height} = appConnect;
     const scaleXY = this.animatedOpacityPoint.interpolate({
       inputRange: [0, 1],
@@ -207,6 +256,28 @@ class Camera extends Component<IProps, IState> {
     });
     const checkFront = typeCamera === RNCamera.Constants.Type.front;
     const left = width / 2 - (checkFront ? 15 : 40);
+    if (image) {
+      return (
+        <View style={[styles.view, {width, height}]}>
+          <View style={styles.viewImage}>
+            <Image
+              style={[
+                {
+                  width,
+                  height,
+                  transform: [
+                    {rotate: this.rotateImage(image.deviceOrientation)},
+                  ],
+                },
+              ]}
+              source={{uri: convertUri(image.uri)}}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+      );
+    }
+
     return (
       <TouchableNativeFeedback onPress={this.handlePress}>
         <Zoom.Animated
@@ -275,9 +346,11 @@ class Camera extends Component<IProps, IState> {
             </View>
           </View>
           <View style={[styles.previewImage]}>{/* <Image */}</View>
-          <View style={[styles.capture, {left: width / 2 - 33}]}>
-            <View style={styles.captureWhite} />
-          </View>
+          <Pressable onPress={this.takePicture}>
+            <View style={[styles.capture, {left: width / 2 - 33}]}>
+              <View style={styles.captureWhite} />
+            </View>
+          </Pressable>
         </Zoom.Animated>
       </TouchableNativeFeedback>
     );
@@ -408,6 +481,7 @@ const styles = StyleSheet.create({
     left: 30,
     backgroundColor: '#fff',
   },
+  viewImage: {},
 });
 
 export default Camera;

@@ -8,11 +8,9 @@ let appConnect: {width: number; height: number} = {
 };
 
 const GlobalScreen = () => {
-  const {
-    screen: {screen},
-  } = useSelector(({screen}: any) => ({screen}));
-
-  appConnect = useMemo(() => screen, []);
+  const {screen: screenD} = useSelector(({screen}: any) => ({screen}));
+  const {screen: screenS} = screenD;
+  appConnect = useMemo(() => screenS, [screenS]);
 
   return null;
 };

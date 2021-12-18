@@ -54,15 +54,16 @@ const handleTouchMove = (e: GestureResponderEvent, paramThis: any) => {
   let zoomNow;
   if (arrayKey.length < 2 || pointerAvailable === 1) {
     const keyNow = arrayKey[0];
-    const {pageX, pageY, start} = paramThis.touchZoom[keyNow];
+    const {pageX: pageXN, pageY: pageYN, start} = paramThis.touchZoom[keyNow];
     const {pageX: pageXStart, pageY: pageYStart} = start;
-    const changeX = Math.abs(pageX - pageXStart);
-    const changeY = Math.abs(pageY - pageYStart);
+    const changeX = Math.abs(pageXN - pageXStart);
+    const changeY = Math.abs(pageYN - pageYStart);
     if ((changeY > changeX && allowZoom !== 'x') || allowZoom === 'y') {
       zoomNow =
-        (pageY - pageYStart) / (Dimensions.get('window').height * speed);
+        (pageYN - pageYStart) / (Dimensions.get('window').height * speed);
     } else {
-      zoomNow = (pageX - pageXStart) / (Dimensions.get('window').width * speed);
+      zoomNow =
+        (pageXN - pageXStart) / (Dimensions.get('window').width * speed);
     }
   } else {
     const key1 = arrayKey[0];

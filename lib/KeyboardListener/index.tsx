@@ -1,4 +1,5 @@
 import {Component} from 'react';
+import {Platform} from 'react-native';
 import {Keyboard} from 'react-native';
 
 interface IProps {
@@ -27,21 +28,32 @@ class KeyboardListener extends Component<IProps> {
       onWillChangeFrame,
       onDidChangeFrame,
     } = props;
-    this.willShow = Keyboard.addListener('keyboardWillShow', e => {
-      onWillShow?.(e);
-    });
-    this.willHide = Keyboard.addListener('keyboardWillHide', e => {
-      onWillHide?.(e);
-    });
+    this.willShow = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
+      e => {
+        onWillShow?.(e);
+      },
+    );
+    this.willHide = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
+      e => {
+        onWillHide?.(e);
+      },
+    );
     this.didShow = Keyboard.addListener('keyboardDidShow', e => {
       onDidShow?.(e);
     });
     this.didHide = Keyboard.addListener('keyboardDidHide', e => {
       onDidHide?.(e);
     });
-    this.willFrame = Keyboard.addListener('keyboardWillChangeFrame', e => {
-      onWillChangeFrame?.(e);
-    });
+    this.willFrame = Keyboard.addListener(
+      Platform.OS === 'android'
+        ? 'keyboardDidChangeFrame'
+        : 'keyboardWillChangeFrame',
+      e => {
+        onWillChangeFrame?.(e);
+      },
+    );
     this.didFrame = Keyboard.addListener('keyboardDidChangeFrame', e => {
       onDidChangeFrame?.(e);
     });

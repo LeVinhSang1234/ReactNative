@@ -3,7 +3,6 @@ import React, {Component, ReactNode} from 'react';
 import {
   Animated,
   StyleSheet,
-  TextInput,
   TouchableNativeFeedback,
   View,
 } from 'react-native';
@@ -13,8 +12,7 @@ import SvgSend from '@/assets/img/icon_send.svg';
 import Extension from '../Extension';
 import {backgroundIconChat, backgroundInputChat} from '@/utils/variables';
 import bar from '@/utils/bar';
-
-const InputAnimated = Animated.createAnimatedComponent(TextInput);
+import InputScrollKeyboard from '@/lib/InputScrollKeyboard';
 
 interface IProps {
   screen: IScreen;
@@ -32,7 +30,6 @@ interface IState {
 class InputChat extends Component<IProps, IState> {
   animated: Animated.ValueXY;
   animatedWidth: Animated.Value;
-  heightInput: Animated.Value;
   input: any;
   extendsion: any;
   constructor(props: IProps) {
@@ -43,20 +40,8 @@ class InputChat extends Component<IProps, IState> {
       screen: {width},
     } = screen;
     this.animatedWidth = new Animated.Value(width - 180);
-    this.heightInput = new Animated.Value(19.5);
     this.state = {inputText: ''};
   }
-
-  heightContentChangeSize = ({nativeEvent}: any) => {
-    const {contentSize} = nativeEvent;
-    const {height} = contentSize;
-    Animated.spring(this.heightInput, {
-      toValue: height,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
-  };
 
   handleChangeText = (value: string) => {
     this.setState({inputText: value});
@@ -72,6 +57,7 @@ class InputChat extends Component<IProps, IState> {
   };
 
   handleOnPressIn = () => {
+    this.input?.focus?.();
     this.extendsion?.handleShowExtendsion?.();
   };
 
@@ -95,26 +81,20 @@ class InputChat extends Component<IProps, IState> {
             handleAnimatedInput={this.handleAnimatedInput}
           />
         </View>
-        <TouchableNativeFeedback
-          onPress={() => {
-            this.handleOnPressIn();
-            this.input?.focus?.();
-          }}>
+        <TouchableNativeFeedback onPress={this.handleOnPressIn}>
           <Animated.View
             style={[
               styles.viewInput,
               {width: this.animatedWidth, backgroundColor},
             ]}>
-            <InputAnimated
-              onPressIn={this.handleOnPressIn}
-              ref={(ref: any) => (this.input = ref)}
-              onChangeText={this.handleChangeText}
-              value={inputText}
-              style={[styles.input, {height: this.heightInput}]}
-              onContentSizeChange={this.heightContentChangeSize}
+            <InputScrollKeyboard
+              maxHeight={110}
               selectionColor={selectionColor}
               placeholder="Aa"
-              multiline
+              style={styles.input}
+              ref={(ref: any) => (this.input = ref)}
+              onPressIn={this.handleOnPressIn}
+              onChangeText={this.handleChangeText}
             />
           </Animated.View>
         </TouchableNativeFeedback>
@@ -158,7 +138,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 0,
     fontSize: 20,
-    maxHeight: 120,
     minHeight: 20,
   },
   viewButtonSend: {

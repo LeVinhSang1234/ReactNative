@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Dimensions, LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
 import {connect} from 'react-redux';
 import {Dispatch} from 'redux';
 import Pages from './pages';
