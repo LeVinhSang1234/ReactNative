@@ -2,7 +2,7 @@ import {convertUri, throwException} from '@/utils';
 import bar from '@/utils/bar';
 import GlobalScreen, {appConnect} from '@/utils/globalScreen';
 import {dark} from '@/utils/variables';
-import React, {Component, ReactNode} from 'react';
+import React, {Component, Fragment, ReactNode} from 'react';
 import {
   Animated,
   Dimensions,
@@ -18,9 +18,12 @@ import {
   View,
 } from 'react-native';
 import {CameraType, FlashMode, RNCamera} from 'react-native-camera';
+import {SvgXml} from 'react-native-svg';
 import IconIon from 'react-native-vector-icons/Ionicons';
+import IconSomeWhere from 'react-native-vector-icons/FontAwesome';
 import Text from '../Text';
 import Zoom from '../ZoomView';
+import SvgSend from '@/assets/img/icon_send.svg';
 
 interface IProps {}
 
@@ -193,7 +196,6 @@ class Camera extends Component<IProps, IState> {
   };
 
   rotateImage = (exifOrientation: number) => {
-    console.log(exifOrientation);
     let degRotation;
     switch (exifOrientation) {
       case 3:
@@ -274,85 +276,114 @@ class Camera extends Component<IProps, IState> {
               resizeMode="contain"
             />
           </View>
+          <TouchableNativeFeedback
+            onPress={() => {
+              this.setState({image: undefined});
+            }}>
+            <View style={styles.iconClose}>
+              <IconIon name="chevron-back" size={30} color="#fff" />
+            </View>
+          </TouchableNativeFeedback>
+          <TouchableNativeFeedback>
+            <View style={styles.buttonSave}>
+              <View style={styles.flexCenter}>
+                <IconSomeWhere size={16} name="long-arrow-down" color="#fff" />
+              </View>
+              <View style={styles.flexCenter}>
+                <View style={styles.viewLineDown} />
+              </View>
+              <Text style={styles.textSave}>Save</Text>
+            </View>
+          </TouchableNativeFeedback>
+          <TouchableNativeFeedback>
+            <View style={styles.buttonSend}>
+              <Text style={styles.textSend}>Send</Text>
+              <SvgXml width={20} height={20} xml={SvgSend} fill="#fff" />
+            </View>
+          </TouchableNativeFeedback>
         </View>
       );
     }
 
     return (
-      <TouchableNativeFeedback onPress={this.handlePress}>
-        <Zoom.Animated
-          pointerAvailable={2}
-          onZoom={this.handleZoom}
-          style={[styles.view, {width, height}]}>
-          <RNCamera
-            exposure={exposure}
-            zoom={zoom}
-            autoFocus={RNCamera.Constants.AutoFocus.off}
-            autoFocusPointOfInterest={
-              checkFront || !cameraReady ? undefined : {x: xPoint, y: yPoint}
-            }
-            style={{width: width, height: height}}
-            ref={ref => (this.camera = ref)}
-            type={typeCamera}
-            flashMode={flashMode}
-            onCameraReady={() => {
-              this.setState({cameraReady: true});
-            }}
-          />
-          <Animated.View
-            style={[
-              styles.viewPointCamera,
-              {
-                transform: [{scale: scaleXY}],
-                opacity: this.animatedOpacityPoint,
-              },
-              this.animatedOpacityPointXY.getLayout(),
-            ]}>
-            <View style={styles.relative}>
-              <View style={styles.pointLineUp} />
-              <View style={styles.pointLineLeft} />
-              <View style={styles.pointLineDown} />
-              <View style={styles.pointLineRight} />
-            </View>
-          </Animated.View>
-          <TouchableNativeFeedback onPress={this.close}>
-            <View style={styles.iconClose}>
-              <IconIon name="ios-close" size={30} color="#fff" />
-            </View>
-          </TouchableNativeFeedback>
-          <View style={[styles.iconChangeCamera, {left}]}>
-            <View style={styles.flash}>
-              <Pressable onPress={this.handleChangeType}>
-                <View style={styles.viewCameraReverse}>
-                  <IconIon name="ios-camera-reverse" size={30} color="#fff" />
-                </View>
-              </Pressable>
-              {checkFront ? null : (
-                <Pressable onPress={this.handleChangeFlash}>
+      <Fragment>
+        <TouchableNativeFeedback onPress={this.handlePress}>
+          <Zoom.Animated
+            pointerAvailable={2}
+            onZoom={this.handleZoom}
+            style={[styles.view, {width, height}]}>
+            <RNCamera
+              exposure={exposure}
+              zoom={zoom}
+              autoFocus={RNCamera.Constants.AutoFocus.off}
+              autoFocusPointOfInterest={
+                checkFront || !cameraReady ? undefined : {x: xPoint, y: yPoint}
+              }
+              style={{width: width, height: height}}
+              ref={ref => (this.camera = ref)}
+              type={typeCamera}
+              flashMode={flashMode}
+              onCameraReady={() => {
+                this.setState({cameraReady: true});
+              }}
+            />
+            <Animated.View
+              style={[
+                styles.viewPointCamera,
+                {
+                  transform: [{scale: scaleXY}],
+                  opacity: this.animatedOpacityPoint,
+                },
+                this.animatedOpacityPointXY.getLayout(),
+              ]}>
+              <View style={styles.relative}>
+                <View style={styles.pointLineUp} />
+                <View style={styles.pointLineLeft} />
+                <View style={styles.pointLineDown} />
+                <View style={styles.pointLineRight} />
+              </View>
+            </Animated.View>
+            <TouchableNativeFeedback onPress={this.close}>
+              <View style={styles.iconClose}>
+                <IconIon name="ios-close" size={30} color="#fff" />
+              </View>
+            </TouchableNativeFeedback>
+            <View style={[styles.iconChangeCamera, {left}]}>
+              <View style={styles.flash}>
+                <Pressable onPress={this.handleChangeType}>
                   <View style={styles.viewCameraReverse}>
-                    <View style={[styles.mt2]}>
-                      <IconIon
-                        name={this.renderNameFlash()}
-                        size={24}
-                        color="#fff"
-                      />
-                    </View>
-                    {flashMode === RNCamera.Constants.FlashMode.auto ? (
-                      <Text style={styles.textAFlash}>A</Text>
-                    ) : null}
+                    <IconIon name="ios-camera-reverse" size={30} color="#fff" />
                   </View>
                 </Pressable>
-              )}
+                {checkFront ? null : (
+                  <Pressable onPress={this.handleChangeFlash}>
+                    <View style={styles.viewCameraReverse}>
+                      <View style={[styles.mt2]}>
+                        <IconIon
+                          name={this.renderNameFlash()}
+                          size={24}
+                          color="#fff"
+                        />
+                      </View>
+                      {flashMode === RNCamera.Constants.FlashMode.auto ? (
+                        <Text style={styles.textAFlash}>A</Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                )}
+              </View>
             </View>
-          </View>
-          <View style={[styles.previewImage]}>{/* <Image */}</View>
-          <Pressable onPress={this.takePicture}>
-            <View style={[styles.capture, {left: width / 2 - 33}]}>
-              <View style={styles.captureWhite} />
+            <View style={[styles.previewImage]}>
+              {/* <Image style={styles.image} source={imagePreview.image} /> */}
             </View>
-          </Pressable>
-        </Zoom.Animated>
-      </TouchableNativeFeedback>
+            <Pressable onPress={this.takePicture}>
+              <View style={[styles.capture, {left: width / 2 - 33}]}>
+                <View style={styles.captureWhite} />
+              </View>
+            </Pressable>
+          </Zoom.Animated>
+        </TouchableNativeFeedback>
+      </Fragment>
     );
   }
 }
@@ -482,6 +513,51 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   viewImage: {},
+  buttonSend: {
+    position: 'absolute',
+    bottom: bar.navbarHeight + 28,
+    right: 20,
+    backgroundColor: '#4a87ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  textSend: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  textSave: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  buttonSave: {
+    position: 'absolute',
+    bottom: bar.navbarHeight + 21,
+    left: 30,
+  },
+  flexCenter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  viewLineDown: {
+    backgroundColor: '#fff',
+    height: 2,
+    width: 17,
+    marginTop: 3,
+    marginBottom: 10,
+    marginRight: 1,
+  },
+  image: {
+    width: 35,
+    height: 35,
+    borderRadius: 8,
+  },
 });
 
 export default Camera;
