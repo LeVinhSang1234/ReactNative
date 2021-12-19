@@ -1,5 +1,5 @@
 import {Component} from 'react';
-import {Platform} from 'react-native';
+import {KeyboardEvent, Platform} from 'react-native';
 import {Keyboard} from 'react-native';
 
 interface IProps {

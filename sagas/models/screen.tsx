@@ -1,12 +1,14 @@
 import {CallEffect} from '@redux-saga/core/effects';
 import {Dimensions} from 'react-native';
 
+export interface ScreenSize {
+  width: number;
+  height: number;
+}
+
 export interface IScreen {
   loading: boolean;
-  screen: {
-    width: number;
-    height: number;
-  };
+  screen: ScreenSize;
 }
 
 export default {

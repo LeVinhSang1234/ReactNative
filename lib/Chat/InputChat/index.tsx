@@ -21,6 +21,7 @@ interface IProps {
   disabledColor?: string;
   onSend?: (v: string) => any;
   onOpenCamera?: any;
+  openSelectImage?: () => any;
 }
 
 interface IState {
@@ -67,6 +68,7 @@ class InputChat extends Component<IProps, IState> {
       backgroundColor = backgroundInputChat,
       selectionColor = backgroundIconChat,
       onOpenCamera,
+      openSelectImage,
     } = this.props;
     const {width} = screen;
     const {inputText} = this.state;
@@ -74,6 +76,7 @@ class InputChat extends Component<IProps, IState> {
       <View style={[styles.view, {width}]}>
         <View style={styles.extendsion}>
           <Extension
+            openSelectImage={openSelectImage}
             onOpenCamera={onOpenCamera}
             ref={ref => (this.extendsion = ref)}
             screen={screen}

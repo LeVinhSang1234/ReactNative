@@ -1,5 +1,5 @@
 import React, {Component, Fragment} from 'react';
-import {ScrollViewProps} from 'react-native';
+import {Keyboard, ScrollViewProps, TouchableNativeFeedback} from 'react-native';
 import {
   LayoutChangeEvent,
   NativeScrollEvent,
@@ -14,12 +14,15 @@ interface IProps extends ScrollViewProps {
   styleKeyboard?: ViewStyle;
   scrollEventThrottle?: number;
   scrollEndFirst?: boolean;
+  keepLayoutWhenHiddenKeyboard?: () => boolean;
+  onPress?: (e: any) => any;
 }
 
 class ScrollKeyboard extends Component<IProps> {
   scrollView?: ScrollView | null;
   scrollNow: number;
   firstComponent: boolean;
+  keyboardLayout?: KeyboardLayout | null;
 
   constructor(props: IProps) {
     super(props);
@@ -51,12 +54,18 @@ class ScrollKeyboard extends Component<IProps> {
     }
   };
 
+  toggleKeyboard = (height: number = 0, animated: boolean = true) => {
+    this.keyboardLayout?.handleAnimated?.(height, animated);
+  };
+
   render() {
     const {
       children,
       componentAvoidingView,
       styleKeyboard,
       scrollEventThrottle = 200,
+      onPress,
+      keepLayoutWhenHiddenKeyboard,
       ...props
     } = this.props;
     return (
@@ -67,10 +76,18 @@ class ScrollKeyboard extends Component<IProps> {
           scrollEventThrottle={scrollEventThrottle}
           onScroll={this.handleScroll}
           ref={ref => (this.scrollView = ref)}
-          keyboardShouldPersistTaps="handled">
-          {children}
+          keyboardShouldPersistTaps="always">
+          <TouchableNativeFeedback
+            onPress={e => {
+              onPress?.(e);
+              Keyboard.dismiss();
+            }}>
+            {children}
+          </TouchableNativeFeedback>
         </ScrollView>
         <KeyboardLayout
+          ref={ref => (this.keyboardLayout = ref)}
+          keepLayoutWhenHiddenKeyboard={keepLayoutWhenHiddenKeyboard}
           style={styleKeyboard}
           distanceHeight={10}
           onHeightChange={this.handleHeightChangeKeyboard}>

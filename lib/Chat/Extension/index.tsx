@@ -16,6 +16,7 @@ interface IProps {
   handleAnimatedInput: (v: number) => any;
   refClass?: (v: any) => any;
   onOpenCamera?: any;
+  openSelectImage?: () => any;
 }
 
 interface IState {
@@ -94,7 +95,7 @@ class Extension extends Component<IProps, IState> {
   };
 
   render() {
-    const {selectionColor} = this.props;
+    const {selectionColor, openSelectImage} = this.props;
     const {showKeyboard, detectClick} = this.state;
     const marginRight = showKeyboard && detectClick ? 2 : 6;
     const marginLeft = showKeyboard && detectClick ? 0 : -5;
@@ -105,7 +106,7 @@ class Extension extends Component<IProps, IState> {
             <Icon name="camera" size={26} color={selectionColor} />
           </View>
         </TouchableNativeFeedback>
-        <TouchableNativeFeedback>
+        <TouchableNativeFeedback onPress={openSelectImage}>
           <View style={[styles.buttonExtend]}>
             <IconIon name="image" size={30} color={selectionColor} />
           </View>

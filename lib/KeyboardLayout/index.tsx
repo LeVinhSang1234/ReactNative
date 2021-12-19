@@ -1,6 +1,7 @@
 import KeyboardListener from '@/lib/KeyboardListener';
 import bar from '@/utils/bar';
 import React, {Component} from 'react';
+import {Keyboard} from 'react-native';
 import {Animated, LayoutChangeEvent, View, ViewStyle} from 'react-native';
 import {StyleSheet} from 'react-native';
 
@@ -10,6 +11,7 @@ interface IProps {
   onWidthChange?: (wPre: number, wNow: number) => any;
   distanceHeight?: number;
   style?: ViewStyle;
+  keepLayoutWhenHiddenKeyboard?: () => boolean;
 }
 
 interface IState {}
@@ -34,21 +36,31 @@ class KeyboardLayout extends Component<IProps, IState> {
   handleShowKeyboard = (e: any) => {
     const {endCoordinates} = e;
     const {height} = endCoordinates;
-    Animated.spring(this.animated, {
-      toValue: height - bar.navbarHeight,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    this.handleAnimated(height - bar.navbarHeight);
   };
 
   handleHideKeyboard = () => {
-    Animated.spring(this.animated, {
-      toValue: 0,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    const {keepLayoutWhenHiddenKeyboard} = this.props;
+    if (!keepLayoutWhenHiddenKeyboard?.()) {
+      this.handleAnimated(0);
+    }
+  };
+
+  handleAnimated = (height: number, animated: boolean = true) => {
+    if (animated) {
+      Animated.spring(this.animated, {
+        toValue: height,
+        bounciness: 0,
+        overshootClamping: true,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(this.animated, {
+        toValue: height,
+        useNativeDriver: false,
+        duration: 0,
+      }).start();
+    }
   };
 
   handleLayout = (e: LayoutChangeEvent) => {

@@ -34,6 +34,7 @@ const handleTouchMove = (e: GestureResponderEvent, paramThis: any) => {
     speed = 200,
     pointerAvailable = 1,
     allowZoom = 'auto',
+    onGesture,
   } = paramThis.props;
   onTouchMove?.(e);
   const {identifier, pageX, pageY} = nativeEvent;
@@ -59,9 +60,11 @@ const handleTouchMove = (e: GestureResponderEvent, paramThis: any) => {
     const changeX = Math.abs(pageXN - pageXStart);
     const changeY = Math.abs(pageYN - pageYStart);
     if ((changeY > changeX && allowZoom !== 'x') || allowZoom === 'y') {
+      onGesture?.(pageYN - pageYStart);
       zoomNow =
         (pageYN - pageYStart) / (Dimensions.get('window').height * speed);
     } else {
+      onGesture?.(pageXN - pageXStart);
       zoomNow =
         (pageXN - pageXStart) / (Dimensions.get('window').width * speed);
     }
@@ -108,6 +111,7 @@ interface IProps {
   pointerAvailable?: number;
   allowZoom?: 'auto' | 'x' | 'y';
   children: any;
+  onGesture?: (ges: number) => any;
 }
 
 interface ITouchZoom {
