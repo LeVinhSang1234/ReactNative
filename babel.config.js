@@ -12,6 +12,7 @@ module.exports = {
           '@/translate': './translate',
           '@/utils': './utils',
           '@/assets': './assets',
+          '@/App': './App',
         },
       },
     ],

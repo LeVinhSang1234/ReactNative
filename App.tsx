@@ -1,28 +1,51 @@
 import React, {Component} from 'react';
-import {LayoutChangeEvent, StyleSheet, View} from 'react-native';
+import {Dimensions, LayoutChangeEvent, StyleSheet, View} from 'react-native';
 import {connect} from 'react-redux';
 import {Dispatch} from 'redux';
 import Pages from './pages';
+import {Lang} from './sagas/models/language';
 import {IScreen} from './sagas/models/screen';
 
 interface IProps {
   screen: IScreen;
   dispatch: Dispatch;
+  language: Lang;
+}
+interface IAppConnect {
+  width: number;
+  height: number;
+  language: string;
 }
 
-class App extends Component<IProps> {
+let appConnect: IAppConnect = {
+  width: Dimensions.get('window').width,
+  height: Dimensions.get('window').height,
+  language: 'en',
+};
+
+interface IState {
+  loading: boolean;
+}
+
+class App extends Component<IProps, IState> {
+  state = {loading: true};
+
+  UNSAFE_componentWillReceiveProps(nProps: IProps) {
+    appConnect.language = nProps.language.lang;
+  }
+
   handleLayout = ({nativeEvent}: LayoutChangeEvent) => {
     const {layout} = nativeEvent;
-    const {dispatch} = this.props;
-    dispatch({
-      type: 'screen/change',
-      payload: {screen: layout, loading: false},
-    });
+    const {language} = this.props;
+    appConnect = {
+      ...layout,
+      language: language.lang,
+    };
+    this.setState({loading: false});
   };
 
   render() {
-    const {screen} = this.props;
-    const {loading} = screen;
+    const {loading} = this.state;
     return (
       <View style={styles.flex} onLayout={this.handleLayout}>
         {loading ? null : <Pages />}
@@ -32,12 +55,9 @@ class App extends Component<IProps> {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
+  flex: {flex: 1},
 });
 
-export default connect(({screen, language}: any) => ({
-  screen,
-  language,
-}))(App);
+export {appConnect};
+
+export default connect(({language}: any) => ({language}))(App);

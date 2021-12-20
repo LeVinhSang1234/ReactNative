@@ -22,6 +22,7 @@ class InputScrollKeyboard extends Component<IProps, IState> {
   scrollInput: number;
   heightScrollNow: number;
   heightInputAnimated: Animated.Value;
+  closeKeyboard: boolean;
 
   constructor(props: IProps) {
     super(props);
@@ -30,6 +31,7 @@ class InputScrollKeyboard extends Component<IProps, IState> {
     this.heightInputAnimated = new Animated.Value(heightInit);
     this.scrollInput = 0;
     this.heightScrollNow = heightInit;
+    this.closeKeyboard = true;
     this.state = {scrollEnable: false};
   }
 
@@ -47,19 +49,30 @@ class InputScrollKeyboard extends Component<IProps, IState> {
   };
 
   handleKeyboardShow = () => {
+    this.closeKeyboard = false;
     this.setState({scrollEnable: true});
     const {heightInit = 19.5} = this.props;
     if (this.heightScrollNow > heightInit) {
-      Animated.spring(this.heightAnimated, {
-        toValue: this.heightScrollNow,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }).start();
+      Animated.parallel([
+        Animated.spring(this.heightAnimated, {
+          toValue: this.heightScrollNow,
+          bounciness: 0,
+          overshootClamping: true,
+          useNativeDriver: false,
+        }),
+        Animated.timing(this.heightInputAnimated, {
+          toValue: this.heightScrollNow,
+          useNativeDriver: false,
+          duration: 0,
+        }),
+      ]).start();
     }
   };
 
   handleChangeSize = ({nativeEvent}: any) => {
+    if (this.closeKeyboard) {
+      return;
+    }
     const {contentSize} = nativeEvent;
     const {height} = contentSize;
     let value = height;
@@ -84,15 +97,23 @@ class InputScrollKeyboard extends Component<IProps, IState> {
   };
 
   handleHideKeyboard = () => {
+    this.closeKeyboard = true;
     this.input?.blur?.();
-    this.setState({scrollEnable: false});
     const {heightInit = 19.5} = this.props;
-    Animated.spring(this.heightAnimated, {
-      toValue: heightInit,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    Animated.parallel([
+      Animated.spring(this.heightAnimated, {
+        toValue: heightInit,
+        bounciness: 0,
+        overshootClamping: true,
+        useNativeDriver: false,
+      }),
+      Animated.timing(this.heightInputAnimated, {
+        toValue: heightInit,
+        useNativeDriver: false,
+        duration: 0,
+      }),
+    ]).start();
+    this.setState({scrollEnable: false});
   };
 
   render() {
@@ -123,7 +144,9 @@ class InputScrollKeyboard extends Component<IProps, IState> {
 }
 
 const styles = StyleSheet.create({
-  input: {},
+  input: {
+    textAlignVertical: 'top',
+  },
 });
 
 export default InputScrollKeyboard;

@@ -2,7 +2,7 @@ import deviceInfoModule from 'react-native-device-info';
 import {Platform, StatusBar} from 'react-native';
 
 const height = Platform.select({
-  ios: deviceInfoModule.hasNotch() ? 45 : 30,
+  ios: deviceInfoModule.hasNotch() ? 35 : 20,
   android: StatusBar.currentHeight,
   default: 0,
 });

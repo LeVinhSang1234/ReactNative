@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     paddingTop: 0,
-    fontSize: 20,
-    minHeight: 20,
+    marginTop: 0,
+    fontSize: 19,
   },
   viewButtonSend: {
     width: 50,

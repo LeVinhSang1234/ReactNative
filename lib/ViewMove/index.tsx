@@ -2,17 +2,19 @@ import React, {Component} from 'react';
 import {GestureResponderEvent, StyleSheet, View, ViewProps} from 'react-native';
 
 interface IProps extends ViewProps {
-  onMove?: (v: number) => any;
+  onMove?: (v: number, diffY: number) => any;
   onMoveEnd?: (e: GestureResponderEvent) => any;
 }
 
 class ViewMove extends Component<IProps> {
   heightInitView: number;
   pageYNow: number;
+  pageYStart: number;
   constructor(props: IProps) {
     super(props);
     this.heightInitView = 0;
     this.pageYNow = 0;
+    this.pageYStart = 0;
   }
 
   handleLayout = ({nativeEvent}: any) => {
@@ -23,12 +25,13 @@ class ViewMove extends Component<IProps> {
   handleTouchStart = ({nativeEvent}: any) => {
     const {pageY} = nativeEvent;
     this.pageYNow = pageY;
+    this.pageYStart = pageY;
   };
 
   handleMove = ({nativeEvent}: any) => {
     const {onMove} = this.props;
     const {pageY} = nativeEvent;
-    onMove?.(pageY - this.pageYNow);
+    onMove?.(pageY - this.pageYNow, pageY - this.pageYStart);
     this.pageYNow = pageY;
   };
 

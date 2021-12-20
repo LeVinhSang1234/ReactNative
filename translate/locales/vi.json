@@ -1,0 +1,15 @@
+{
+  "hello": "xin chào",
+  "camera.button.save_image": "Lưu",
+  "camera.button.send_image": "Gửi",
+  "screen.list_image.button.cancel": "Huỷ",
+  "screen.list_image.title_image_default": "Ảnh",
+  "screen.list_image.button.open_list_album": "Album",
+  "screen.list_image.title_add_permission_library": "Quyền truy cập vào ảnh và video của bạn",
+  "screen.list_image.title_add_permission_description1": "Cho phép App truy cập vào ảnh và video",
+  "screen.list_image.title_add_permission_description2": "để bạn có thể chia sẻ với bạn bè",
+  "screen.list_image.button_add_permission": "Cho phép truy cập",
+  "screen.list_image.permission_library_photo_denied": "Vui lòng cấp quyền trong cài đặt",
+  "screen.list_album.button.cancel": "Huỷ",
+  "screen.list_album.title": "Chọn Album"
+}

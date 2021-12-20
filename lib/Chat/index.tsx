@@ -7,6 +7,7 @@ import ScrollKeyboard from '../ScrollKeyboard';
 import Camera from '../Camera';
 import SelectImage, {SImage} from '../SelectImage';
 import {Keyboard} from 'react-native';
+import translate from '@/translate';
 
 interface IProps {}
 
@@ -60,7 +61,7 @@ class Chat extends Component<IProps> {
             />
           }>
           <View style={styles.contentScroll}>
-            <Text>SangDz Le Vinh</Text>
+            <Text>{translate({id: 'hello', defaultValue: 'Hello'})}</Text>
             <Text style={styles.text}>SangDz Le Vinh</Text>
             <Text style={styles.text}>SangDz Le Vinh</Text>
             <Text style={styles.text}>SangDz Le Vinh</Text>

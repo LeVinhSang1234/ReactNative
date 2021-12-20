@@ -7,7 +7,7 @@ export interface Lang {
 export default {
   namespace: 'language',
   state: {
-    lang: 'en',
+    lang: 'vi',
   },
 
   effects: {

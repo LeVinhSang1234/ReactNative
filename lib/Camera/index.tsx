@@ -1,6 +1,6 @@
 import {convertUri, throwException} from '@/utils';
 import bar from '@/utils/bar';
-import GlobalScreen, {appConnect} from '@/utils/globalScreen';
+import {appConnect} from '@/App';
 import {dark} from '@/utils/variables';
 import React, {Component, Fragment, ReactNode} from 'react';
 import {
@@ -24,6 +24,8 @@ import IconSomeWhere from 'react-native-vector-icons/FontAwesome';
 import Text from '../Text';
 import Zoom from '../ZoomView';
 import SvgSend from '@/assets/img/icon_send.svg';
+import translate from '@/translate';
+import SelectImage from '../SelectImage';
 
 interface IProps {}
 
@@ -48,6 +50,7 @@ class Camera extends Component<IProps, IState> {
   animatedOpacityPoint: Animated.Value;
   animatedOpacityPointXY: Animated.ValueXY;
   isZoom: boolean;
+  selectImage?: SelectImage | null;
 
   constructor(props: IProps) {
     super(props);
@@ -202,7 +205,7 @@ class Camera extends Component<IProps, IState> {
         degRotation = '360deg';
         break;
       case 4:
-        degRotation = '180deg';
+        degRotation = '360deg';
         break;
       case 5:
         degRotation = '90deg';
@@ -236,6 +239,10 @@ class Camera extends Component<IProps, IState> {
     }
   };
 
+  handleSelectImage = () => {
+    this.selectImage?.open?.();
+  };
+
   render(): ReactNode {
     const {
       open,
@@ -249,7 +256,7 @@ class Camera extends Component<IProps, IState> {
       image,
     } = this.state;
     if (!open) {
-      return <GlobalScreen />;
+      return null;
     }
     const {width, height} = appConnect;
     const scaleXY = this.animatedOpacityPoint.interpolate({
@@ -292,12 +299,22 @@ class Camera extends Component<IProps, IState> {
               <View style={styles.flexCenter}>
                 <View style={styles.viewLineDown} />
               </View>
-              <Text style={styles.textSave}>Save</Text>
+              <Text style={styles.textSave}>
+                {translate({
+                  id: 'camera.button.save_image',
+                  defaultValue: 'Lưu',
+                })}
+              </Text>
             </View>
           </TouchableNativeFeedback>
           <TouchableNativeFeedback>
             <View style={styles.buttonSend}>
-              <Text style={styles.textSend}>Send</Text>
+              <Text style={styles.textSend}>
+                {translate({
+                  id: 'camera.button.send_image',
+                  defaultValue: 'Gửi',
+                })}
+              </Text>
               <SvgXml width={20} height={20} xml={SvgSend} fill="#fff" />
             </View>
           </TouchableNativeFeedback>
@@ -373,9 +390,11 @@ class Camera extends Component<IProps, IState> {
                 )}
               </View>
             </View>
-            <View style={[styles.previewImage]}>
-              {/* <Image style={styles.image} source={imagePreview.image} /> */}
-            </View>
+            <Pressable onPress={this.handleSelectImage}>
+              <View style={[styles.previewImage]}>
+                {/* <Image style={styles.image} source={imagePreview.image} /> */}
+              </View>
+            </Pressable>
             <Pressable onPress={this.takePicture}>
               <View style={[styles.capture, {left: width / 2 - 33}]}>
                 <View style={styles.captureWhite} />
@@ -383,6 +402,7 @@ class Camera extends Component<IProps, IState> {
             </Pressable>
           </Zoom.Animated>
         </TouchableNativeFeedback>
+        <SelectImage fullScreen ref={ref => (this.selectImage = ref)} />
       </Fragment>
     );
   }
