@@ -31,12 +31,20 @@ class ViewMove extends Component<IProps> {
   handleMove = ({nativeEvent}: any) => {
     const {onMove} = this.props;
     const {pageY} = nativeEvent;
+    if (Math.abs(pageY - this.pageYStart) < 20) {
+      return;
+    }
     onMove?.(pageY - this.pageYNow, pageY - this.pageYStart);
     this.pageYNow = pageY;
   };
 
   handleMoveEnd = (e: any) => {
+    const {nativeEvent} = e;
     const {onMoveEnd} = this.props;
+    const {pageY} = nativeEvent;
+    if (Math.abs(pageY - this.pageYStart) < 20) {
+      return;
+    }
     onMoveEnd?.(e);
   };
 

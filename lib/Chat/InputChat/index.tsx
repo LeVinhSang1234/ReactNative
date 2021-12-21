@@ -13,6 +13,7 @@ import Extension from '../Extension';
 import {backgroundIconChat, backgroundInputChat} from '@/utils/variables';
 import bar from '@/utils/bar';
 import InputScrollKeyboard from '@/lib/InputScrollKeyboard';
+import {animatedSpringLayout} from '@/utils';
 
 interface IProps {
   screen: IScreen;
@@ -49,12 +50,7 @@ class InputChat extends Component<IProps, IState> {
   };
 
   handleAnimatedInput = (value: number) => {
-    Animated.spring(this.animatedWidth, {
-      toValue: value,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    animatedSpringLayout(this.animatedWidth, value).start();
   };
 
   handleOnPressIn = () => {

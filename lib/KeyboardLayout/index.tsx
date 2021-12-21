@@ -1,7 +1,7 @@
 import KeyboardListener from '@/lib/KeyboardListener';
+import {animatedSpringLayout, animatedTiming} from '@/utils';
 import bar from '@/utils/bar';
 import React, {Component} from 'react';
-import {Keyboard} from 'react-native';
 import {Animated, LayoutChangeEvent, View, ViewStyle} from 'react-native';
 import {StyleSheet} from 'react-native';
 
@@ -48,18 +48,9 @@ class KeyboardLayout extends Component<IProps, IState> {
 
   handleAnimated = (height: number, animated: boolean = true) => {
     if (animated) {
-      Animated.spring(this.animated, {
-        toValue: height,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }).start();
+      animatedSpringLayout(this.animated, height).start();
     } else {
-      Animated.timing(this.animated, {
-        toValue: height,
-        useNativeDriver: false,
-        duration: 0,
-      }).start();
+      animatedTiming(this.animated, height).start();
     }
   };
 

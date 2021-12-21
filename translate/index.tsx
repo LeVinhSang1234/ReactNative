@@ -6,7 +6,7 @@ interface ITranslate {
   id: string;
   defaultValue?: string;
   values?: {
-    [key: string]: string;
+    [key: string | number]: string | number;
   };
 }
 
@@ -14,7 +14,7 @@ I18n.fallbacks = true;
 I18n.translations = config;
 
 const translate = ({id, defaultValue, values}: ITranslate) => {
-  return I18n.t(id, {defaultValue, locale: appConnect.language, values});
+  return I18n.t(id, {defaultValue, locale: appConnect.language, ...values});
 };
 
 export default translate;

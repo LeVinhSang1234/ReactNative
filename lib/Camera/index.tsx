@@ -1,4 +1,10 @@
-import {convertUri, throwException} from '@/utils';
+import {
+  animatedTiming,
+  animatedTimingObject,
+  convertUri,
+  promiseTiming,
+  throwException,
+} from '@/utils';
 import bar from '@/utils/bar';
 import {appConnect} from '@/App';
 import {dark} from '@/utils/variables';
@@ -8,7 +14,6 @@ import {
   Dimensions,
   Easing,
   GestureResponderEvent,
-  Image,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -26,6 +31,7 @@ import Zoom from '../ZoomView';
 import SvgSend from '@/assets/img/icon_send.svg';
 import translate from '@/translate';
 import SelectImage from '../SelectImage';
+import Image from './Image';
 
 interface IProps {}
 
@@ -51,6 +57,7 @@ class Camera extends Component<IProps, IState> {
   animatedOpacityPointXY: Animated.ValueXY;
   isZoom: boolean;
   selectImage?: SelectImage | null;
+  imagePreviewCamera?: Image | null;
 
   constructor(props: IProps) {
     super(props);
@@ -77,11 +84,7 @@ class Camera extends Component<IProps, IState> {
 
   close = () => {
     StatusBar.setHidden(false);
-    Animated.timing(this.animatedOpacityPoint, {
-      toValue: 0,
-      useNativeDriver: false,
-      duration: 0,
-    }).start();
+    animatedTiming(this.animatedOpacityPoint, 0, 0).start();
     this.setState({open: false, zoom: 0, image: undefined});
   };
 
@@ -132,7 +135,7 @@ class Camera extends Component<IProps, IState> {
     }
   };
 
-  handlePress = ({nativeEvent}: GestureResponderEvent) => {
+  handlePress = async ({nativeEvent}: GestureResponderEvent) => {
     if (this.isZoom) {
       this.isZoom = false;
       return;
@@ -144,44 +147,29 @@ class Camera extends Component<IProps, IState> {
       return this.handleChangeType();
     }
     const {typeCamera} = this.state;
-    this.timeout = setTimeout(() => {
+    this.timeout = setTimeout(async () => {
       this.timeout = undefined;
       if (typeCamera === RNCamera.Constants.Type.front) {
         return;
       }
       const x = pageX - 45 >= 0 ? pageX - 45 : 0;
       const y = pageY - 45 >= 0 ? pageY - 45 : 0;
-      Animated.timing(this.animatedOpacityPoint, {
-        toValue: 0,
-        useNativeDriver: false,
-        duration: 0,
-      }).start(({finished: f}) => {
-        if (f) {
-          Animated.parallel([
-            Animated.timing(this.animatedOpacityPointXY, {
-              toValue: {x, y},
-              useNativeDriver: false,
-              duration: 0,
-            }),
-            Animated.timing(this.animatedOpacityPoint, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: false,
-              easing: Easing.elastic(4),
-            }),
-          ]).start(({finished}) => {
-            if (finished) {
-              Animated.timing(this.animatedOpacityPoint, {
-                toValue: 0,
-                useNativeDriver: false,
-                duration: 0,
-                delay: 1000,
-              }).start();
-            }
-          });
+      await promiseTiming(this.animatedOpacityPoint, 0, 0, false);
+      Animated.parallel([
+        animatedTiming(this.animatedOpacityPointXY, {x, y}, 0),
+        animatedTimingObject(this.animatedOpacityPoint, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.elastic(4),
+        }),
+      ]).start(({finished}) => {
+        if (finished) {
+          animatedTimingObject(this.animatedOpacityPoint, {
+            toValue: 0,
+            delay: 1000,
+          }).start();
         }
       });
-
       this.setState({
         xPoint: Number((pageY / Dimensions.get('window').height).toFixed(1)),
         yPoint: 1 - Number((pageX / Dimensions.get('window').width).toFixed(1)),
@@ -241,6 +229,10 @@ class Camera extends Component<IProps, IState> {
 
   handleSelectImage = () => {
     this.selectImage?.open?.();
+  };
+
+  handleSetInitImage = (image: any) => {
+    this.imagePreviewCamera?.setImage?.(image);
   };
 
   render(): ReactNode {
@@ -390,11 +382,16 @@ class Camera extends Component<IProps, IState> {
                 )}
               </View>
             </View>
-            <Pressable onPress={this.handleSelectImage}>
-              <View style={[styles.previewImage]}>
-                {/* <Image style={styles.image} source={imagePreview.image} /> */}
-              </View>
-            </Pressable>
+            <View style={[styles.previewImage]}>
+              <TouchableNativeFeedback onPress={this.handleSelectImage}>
+                <View>
+                  <Image
+                    style={styles.image}
+                    ref={ref => (this.imagePreviewCamera = ref)}
+                  />
+                </View>
+              </TouchableNativeFeedback>
+            </View>
             <Pressable onPress={this.takePicture}>
               <View style={[styles.capture, {left: width / 2 - 33}]}>
                 <View style={styles.captureWhite} />
@@ -402,7 +399,11 @@ class Camera extends Component<IProps, IState> {
             </Pressable>
           </Zoom.Animated>
         </TouchableNativeFeedback>
-        <SelectImage fullScreen ref={ref => (this.selectImage = ref)} />
+        <SelectImage
+          onLoadWillMount={this.handleSetInitImage}
+          fullScreen
+          ref={ref => (this.selectImage = ref)}
+        />
       </Fragment>
     );
   }
@@ -530,7 +531,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: bar.navbarHeight + 48,
     left: 30,
-    backgroundColor: '#fff',
   },
   viewImage: {},
   buttonSend: {
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   buttonSave: {
     position: 'absolute',
-    bottom: bar.navbarHeight + 21,
+    bottom: bar.navbarHeight + 18,
     left: 30,
   },
   flexCenter: {

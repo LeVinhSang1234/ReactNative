@@ -1,3 +1,4 @@
+import {animatedSpringLayout, animatedTiming} from '@/utils';
 import React, {Component, Fragment} from 'react';
 import {Animated, StyleSheet, TextInputProps} from 'react-native';
 import {TextInput} from 'react-native-gesture-handler';
@@ -54,17 +55,8 @@ class InputScrollKeyboard extends Component<IProps, IState> {
     const {heightInit = 19.5} = this.props;
     if (this.heightScrollNow > heightInit) {
       Animated.parallel([
-        Animated.spring(this.heightAnimated, {
-          toValue: this.heightScrollNow,
-          bounciness: 0,
-          overshootClamping: true,
-          useNativeDriver: false,
-        }),
-        Animated.timing(this.heightInputAnimated, {
-          toValue: this.heightScrollNow,
-          useNativeDriver: false,
-          duration: 0,
-        }),
+        animatedSpringLayout(this.heightAnimated, this.heightScrollNow),
+        animatedTiming(this.heightInputAnimated, this.heightScrollNow),
       ]).start();
     }
   };
@@ -82,17 +74,8 @@ class InputScrollKeyboard extends Component<IProps, IState> {
     }
     this.heightScrollNow = value;
     Animated.parallel([
-      Animated.timing(this.heightInputAnimated, {
-        toValue: height,
-        useNativeDriver: false,
-        duration: 0,
-      }),
-      Animated.spring(this.heightAnimated, {
-        toValue: value,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
+      animatedTiming(this.heightInputAnimated, height),
+      animatedSpringLayout(this.heightAnimated, value),
     ]).start();
   };
 
@@ -101,17 +84,8 @@ class InputScrollKeyboard extends Component<IProps, IState> {
     this.input?.blur?.();
     const {heightInit = 19.5} = this.props;
     Animated.parallel([
-      Animated.spring(this.heightAnimated, {
-        toValue: heightInit,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.timing(this.heightInputAnimated, {
-        toValue: heightInit,
-        useNativeDriver: false,
-        duration: 0,
-      }),
+      animatedSpringLayout(this.heightAnimated, heightInit),
+      animatedTiming(this.heightInputAnimated, heightInit),
     ]).start();
     this.setState({scrollEnable: false});
   };

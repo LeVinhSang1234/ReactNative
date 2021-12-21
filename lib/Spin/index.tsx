@@ -4,17 +4,24 @@ import {StyleSheet, View, ActivityIndicator, ViewStyle} from 'react-native';
 interface IProps {
   children?: any;
   spinning?: boolean;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   backgroundColor?: string;
+  backgroundColorImage?: string;
 }
 
 const Spin = (props: IProps) => {
-  const {children, spinning, backgroundColor = '#fff', style} = props;
+  const {
+    children,
+    spinning,
+    backgroundColor = '#fff',
+    style,
+    backgroundColorImage = 'rgba(255, 255, 255, 0.7)',
+  } = props;
 
   return (
     <View style={[styles.view, {backgroundColor}, style]}>
       {spinning && (
-        <View style={{...styles.image}}>
+        <View style={[styles.image, {backgroundColor: backgroundColorImage}]}>
           <ActivityIndicator size="small" />
         </View>
       )}
@@ -28,7 +35,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     zIndex: 10000,
     flexDirection: 'row',
     alignItems: 'center',

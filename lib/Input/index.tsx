@@ -1,7 +1,8 @@
+import translate from '@/translate';
+import {animatedTiming} from '@/utils';
 import React, {Component, ReactNode, FC} from 'react';
 import {TextInput, Animated, StyleSheet, TextInputProps} from 'react-native';
 import {connect} from 'react-redux';
-import {translateText} from '../../translate';
 
 const InputAnimated = Animated.createAnimatedComponent(TextInput);
 
@@ -43,11 +44,7 @@ class Input extends Component<IProps, IState> {
       return;
     }
     if (!error) {
-      Animated.timing(this.animated, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
+      animatedTiming(this.animated, 1, 200).start();
     }
     const {onFocus} = this.props;
     if (typeof onFocus === 'function') {
@@ -61,11 +58,7 @@ class Input extends Component<IProps, IState> {
       return;
     }
     if (!error) {
-      Animated.timing(this.animated, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
+      animatedTiming(this.animated, 0, 200).start();
     }
     const {onBlur} = this.props;
     if (typeof onBlur === 'function') {
@@ -74,18 +67,13 @@ class Input extends Component<IProps, IState> {
   };
 
   renderPlaceholder = (): string => {
-    const {
-      locale = '',
-      placeholderKeyTranslate,
-      defaultMessageTranslate = '',
-    } = this.props;
+    const {placeholderKeyTranslate, defaultMessageTranslate = ''} = this.props;
     if (!placeholderKeyTranslate) {
       return '';
     }
-    return translateText({
+    return translate({
       id: placeholderKeyTranslate,
-      defaultMessage: defaultMessageTranslate,
-      locale,
+      defaultValue: defaultMessageTranslate,
     });
   };
 

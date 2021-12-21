@@ -26,6 +26,8 @@ class Chat extends Component<IProps> {
   };
 
   handleOpenCamera = () => {
+    Keyboard.dismiss();
+    this.selectImage?.close?.();
     this.camera?.open?.();
   };
 

@@ -6,59 +6,70 @@ import bar from '@/utils/bar';
 import {backgroundIconChat} from '@/utils/variables';
 import IconIon from 'react-native-vector-icons/Ionicons';
 import translate from '@/translate';
+import {animatedSpringLayout, promiseDelayFinished} from '@/utils';
 
 interface IProps {
-  albums: any[];
-  album?: any;
   backgroundColor?: string;
   color?: string;
   colorAlbum?: string;
   onSelect?: (a: any) => any;
 }
+
+interface IState {
+  albums: any[];
+  album: any;
+}
+
 const colorButton = '#4477f3';
 
-class Album extends Component<IProps> {
+class Album extends Component<IProps, IState> {
   heightAlbum: Animated.Value;
   constructor(props: IProps) {
     super(props);
     this.heightAlbum = new Animated.Value(0);
+    this.state = {albums: [], album: {}};
   }
 
-  shouldComponentUpdate(nProps: IProps) {
-    const {albums, album} = this.props;
-    return album !== nProps.album || albums !== nProps.albums;
+  shouldComponentUpdate(_nProps: IProps, nState: IState) {
+    const {albums, album} = this.state;
+    return album !== nState.album || albums !== nState.albums;
   }
+
+  setAlbum = (album: any) => {
+    this.setState({album});
+  };
+
+  setAlbums = (albums: any[], album: any) => {
+    this.setState({albums, album});
+  };
+
+  getAlbums = (): any[] => {
+    const {albums} = this.state;
+    return albums;
+  };
 
   open = () => {
     const {height} = appConnect;
-    Animated.spring(this.heightAlbum, {
-      toValue: height,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    animatedSpringLayout(this.heightAlbum, height).start();
   };
 
   close = () => {
-    Animated.spring(this.heightAlbum, {
-      toValue: 0,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    animatedSpringLayout(this.heightAlbum, 0).start();
   };
 
-  handleSelectAlbum = (albumItem: any) => {
-    const {onSelect, album} = this.props;
+  handleSelectAlbum = async (albumItem: any) => {
+    await promiseDelayFinished(this.heightAlbum, 0, 260);
+    const {onSelect} = this.props;
+    const {album} = this.state;
     if (album.localIdentifier !== albumItem.localIdentifier) {
       onSelect?.(albumItem);
     }
-    this.close();
   };
 
   renderAlbum = (albumItem: any) => {
     const {image, _imageRef} = albumItem.previewAsset;
-    const {album, colorAlbum} = this.props;
+    const {colorAlbum} = this.props;
+    const {album} = this.state;
     return (
       <Pressable
         onPress={() => this.handleSelectAlbum(albumItem)}
@@ -82,11 +93,11 @@ class Album extends Component<IProps> {
   };
 
   render() {
-    const {
-      albums = [],
-      backgroundColor = '#fff',
-      colorAlbum = backgroundIconChat,
-    } = this.props;
+    let {backgroundColor = '#fff', colorAlbum} = this.props;
+    if (!colorAlbum) {
+      colorAlbum = backgroundIconChat;
+    }
+    const {albums = []} = this.state;
     const {width} = appConnect;
     return (
       <Animated.View

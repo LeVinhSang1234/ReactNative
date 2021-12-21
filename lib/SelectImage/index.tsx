@@ -1,46 +1,49 @@
 import {appConnect} from '@/App';
-import translate from '@/translate';
-import {throwException, unMount} from '@/utils';
+import {
+  animatedSpringLayout,
+  animatedTiming,
+  promiseSringLayout,
+  throwException,
+  unMount,
+} from '@/utils';
 import bar from '@/utils/bar';
 import {backgroundIconChat} from '@/utils/variables';
-import React, {Component, Fragment} from 'react';
-import {FlatList, Pressable, View} from 'react-native';
+import React, {Component, Fragment, lazy, Suspense} from 'react';
+import {View} from 'react-native';
 import {Animated, KeyboardEvent, StyleSheet} from 'react-native';
 import RNPhotosFramework from 'rn-photos-framework';
 import KeyboardListener from '../KeyboardListener';
-import Spin from '../Spin';
-import Text from '../Text';
 import ViewMove from '../ViewMove';
 import Album from './Album';
-import PreImage from './PreImage';
+import ButtonSelect from './ButtonSelect';
+import Extension from './Extension';
+import FlatListImage from './FlatListImage';
+import {BlurView} from '@react-native-community/blur';
+import PreviewImage from './PreviewImage';
+
+const Permission = lazy(() => import('./Permission'));
+const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 interface IProps {
   toggleKeyboard?: (h?: number, animated?: boolean) => any;
   openWhenShowKeyboard?: boolean;
   fullScreen?: boolean;
   backgroundColor?: string;
-  hiddenStatusBarWhenOpen?: boolean;
   spaceTopWhenFullScreen?: number;
   colorText?: string;
   description?: string;
   maxPoint?: number;
-  onSelect?: (image: any) => any;
+  onSelectFinish?: (image: any[]) => any;
+  onLoadWillMount?: (image: any) => any;
 }
 interface IState {
   permission: {isAuthorized: boolean; status?: string};
-  loading: boolean;
-  heightInit: number;
-  album: any;
-  photos: any[];
-  scrollEnable: boolean;
-  albums: any[];
 }
 
 const initHeight = 260;
 const maxHeightDrag = 37;
 
 class SelectImage extends Component<IProps, IState> {
-  dataTracking: any;
   animatedBackdropOpacity: Animated.Value;
   animatedBackdropHeight: Animated.Value;
   animatedHeight: Animated.Value | any;
@@ -50,27 +53,21 @@ class SelectImage extends Component<IProps, IState> {
   isOpen: boolean;
   isUpMove: boolean;
   maxHeightModal: number;
-  scrollYNow: number;
-  scrollEnd: boolean;
   forceDrag: boolean;
   detectMove: boolean;
-  flatList?: FlatList<any> | null;
   unSubAlbum: any;
   album?: Album | null;
+  flatList?: FlatListImage | null;
+  extension?: Extension | null;
+  heightInit: number;
+  buttonSelect?: ButtonSelect | null;
+  previewImage?: PreviewImage | null;
 
   constructor(props: IProps) {
     super(props);
     const {fullScreen, maxPoint} = props;
     const {height} = appConnect;
-    this.state = {
-      loading: true,
-      permission: {isAuthorized: false, status: ''},
-      heightInit: 0,
-      album: undefined,
-      photos: [],
-      scrollEnable: true,
-      albums: [],
-    };
+    this.state = {permission: {isAuthorized: false, status: ''}};
     this.animatedBackdropOpacity = new Animated.Value(0);
     this.animatedBackdropHeight = new Animated.Value(0);
     this.animatedHeight = new Animated.Value(0);
@@ -80,10 +77,9 @@ class SelectImage extends Component<IProps, IState> {
     this.isOpen = false;
     this.isUpMove = false;
     this.maxHeightModal = maxPoint || height - (fullScreen ? 0 : 70);
-    this.scrollYNow = 0;
-    this.scrollEnd = false;
     this.forceDrag = false;
     this.detectMove = false;
+    this.heightInit = 0;
   }
 
   async UNSAFE_componentWillMount() {
@@ -92,7 +88,7 @@ class SelectImage extends Component<IProps, IState> {
     if (isAuthorized) {
       await this.handleGetAlbum();
     } else {
-      this.setState({permission, loading: false});
+      this.setState({permission});
     }
   }
 
@@ -103,11 +99,7 @@ class SelectImage extends Component<IProps, IState> {
 
   componentWillUnmount() {
     this.unSubAlbum?.();
-    Animated.timing(this.animatedBackdropHeight, {
-      toValue: 0,
-      useNativeDriver: false,
-      duration: 0,
-    }).start();
+    animatedTiming(this.animatedBackdropHeight, 0).start();
     this.close();
     unMount(this);
   }
@@ -121,46 +113,18 @@ class SelectImage extends Component<IProps, IState> {
   };
 
   handleGetAlbum = async () => {
-    const {loading} = this.state;
-    if (!loading) {
-      this.setState({loading: true});
-    }
-
+    const {onLoadWillMount} = this.props;
     try {
+      const config = {
+        subType: 'any',
+        assetCount: 'exact',
+        fetchOptions: {sortDescriptors: [{key: 'title', ascending: true}]},
+        previewAssets: 1,
+      };
       const data = await RNPhotosFramework.getAlbumsMany(
         [
-          {
-            type: 'smartAlbum',
-            subType: 'any',
-            assetCount: 'exact',
-            fetchOptions: {
-              sortDescriptors: [
-                {
-                  key: 'title',
-                  ascending: true,
-                },
-              ],
-              includeHiddenAssets: false,
-              includeAllBurstAssets: false,
-            },
-            previewAssets: 1,
-          },
-          {
-            type: 'album',
-            subType: 'any',
-            assetCount: 'exact',
-            fetchOptions: {
-              sortDescriptors: [
-                {
-                  key: 'title',
-                  ascending: false,
-                },
-              ],
-              includeHiddenAssets: false,
-              includeAllBurstAssets: false,
-            },
-            previewAssets: 1,
-          },
+          {type: 'smartAlbum', ...config},
+          {type: 'album', ...config},
         ],
         true,
       );
@@ -169,13 +133,11 @@ class SelectImage extends Component<IProps, IState> {
         .sort?.((a: any, b: any) => (b.assetCount > a.assetCount ? 1 : -1));
       const albumActive = albumSort[0];
       const photos = await this.handleGetPhotos(albumActive);
-      this.setState({
-        permission: {isAuthorized: true},
-        loading: false,
-        album: albumActive,
-        photos,
-        albums: albumSort,
-      });
+      onLoadWillMount?.(photos[0]);
+      this.setState({permission: {isAuthorized: true}});
+      this.extension?.setAlbum?.(albumActive);
+      this.flatList?.setPhotos?.(photos);
+      this.album?.setAlbums?.(albumSort, albumActive);
     } catch (e) {
       throwException(e);
     }
@@ -183,16 +145,13 @@ class SelectImage extends Component<IProps, IState> {
 
   handleSelectAlbum = async (albumItem: any) => {
     this.flatList?.scrollToOffset?.({animated: false, offset: 0});
-    this.setState({loading: true});
     const photos = await this.handleGetPhotos(albumItem);
-    this.setState({loading: false, album: albumItem, photos});
+    this.extension?.setAlbum?.(albumItem);
+    this.flatList?.setPhotos?.(photos);
+    this.album?.setAlbum?.(albumItem);
   };
 
   handleGetPhotos = async (album: any) => {
-    const {loading} = this.state;
-    if (!loading) {
-      this.setState({loading: true});
-    }
     const {assets} = await this.getAssets(album);
     return assets;
   };
@@ -206,10 +165,10 @@ class SelectImage extends Component<IProps, IState> {
     });
     this.unSubAlbum?.();
     album.onChange(async (changeDetails: any, update: any) => {
-      const {photos} = this.state;
+      const photos = this.flatList?.getPhotos?.() || [];
       if (changeDetails.hasIncrementalChanges) {
         update(photos, (updatedAssetArray: any[]) => {
-          this.setState({photos: updatedAssetArray});
+          this.flatList?.setPhotos?.(updatedAssetArray);
         });
       }
     });
@@ -227,77 +186,66 @@ class SelectImage extends Component<IProps, IState> {
     if (fullScreen) {
       return this.handleOpenModal();
     }
-    const {heightInit} = this.state;
-    const heightBase = heightInit || initHeight;
+    const heightBase = this.heightInit || initHeight;
     toggleKeyboard?.(heightBase);
     this.toggle(heightBase + bar.navbarHeight);
   };
 
-  close = () => {
+  close = async () => {
     this.isOpen = false;
     const {toggleKeyboard} = this.props;
     toggleKeyboard?.(0);
     this.toggle(0);
-    Animated.spring(this.opacityChild, {
-      toValue: 0,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    this.buttonSelect?.resetImage?.();
+    await promiseSringLayout(this.opacityChild, 0);
+    const albums = this.album?.getAlbums?.() || [];
+    const album = this.extension?.getAlbum?.() || {};
+    if (albums[0] && albums[0].localIdentifier !== album.localIdentifier) {
+      await this.handleSelectAlbum(albums[0]);
+    }
     this.flatList?.scrollToOffset?.({animated: false, offset: 0});
   };
 
   opacity = (toValue: 0 | 1) => {
-    Animated.spring(this.opacityChild, {
-      toValue: toValue,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    animatedSpringLayout(this.opacityChild, toValue).start();
   };
 
   toggle = (height: number = 0) => {
-    Animated.spring(this.animatedHeight, {
-      toValue: height,
-      bounciness: 0,
-      overshootClamping: true,
-      useNativeDriver: false,
-    }).start();
+    animatedSpringLayout(this.animatedHeight, height).start();
   };
 
   handleShowKeyboard = (e: KeyboardEvent) => {
     this.opacity(0);
-    const {heightInit} = this.state;
     const {openWhenShowKeyboard} = this.props;
     const {height} = e.endCoordinates;
     if (this.isOpen || (openWhenShowKeyboard && !this.isOpen)) {
       this.toggle(height);
     }
-    if (heightInit !== 0) {
+    if (this.heightInit !== 0) {
       return;
     }
-    this.setState({heightInit: height});
+    this.heightInit = height;
   };
 
   handleMove = (yChange: number) => {
     const {toggleKeyboard, fullScreen} = this.props;
     const y = this.animatedHeight._value - yChange;
     const {height} = appConnect;
-    const {heightInit, scrollEnable} = this.state;
     this.isUpMove = yChange < 0;
     if (y >= this.maxHeightModal) {
       return;
     }
+    const scrollEnable = this.flatList?.getScroll?.();
     if (scrollEnable) {
-      if (this.isUpMove && !this.scrollEnd && !this.forceDrag) {
+      if (this.isUpMove && !this.flatList?.scrollEnd && !this.forceDrag) {
         return;
       }
-      if (!this.isUpMove && this.scrollYNow > 0 && !this.forceDrag) {
+      if (!this.isUpMove && this.flatList?.scrollYNow > 0 && !this.forceDrag) {
         return;
       }
-      this.setState({scrollEnable: false});
+      this.flatList?.enableScroll(false);
     }
-    const heightIntBase = (heightInit || initHeight) + bar.navbarHeight;
+    const heightIntBase = (this.heightInit || initHeight) + bar.navbarHeight;
     let scalce = (y - heightIntBase) / (this.maxHeightModal - heightIntBase);
     if (scalce <= 0) {
       scalce = 0;
@@ -306,31 +254,15 @@ class SelectImage extends Component<IProps, IState> {
     }
     this.detectMove = true;
     Animated.parallel([
-      Animated.timing(this.animatedHeight, {
-        toValue: y,
-        duration: 10,
-        useNativeDriver: false,
-      }),
-      Animated.timing(this.animatedBackdropHeight, {
-        toValue: y > heightIntBase ? appConnect.height : 0,
-        duration: 0,
-        useNativeDriver: false,
-      }),
-      Animated.timing(this.animatedBackdropOpacity, {
-        toValue: y / height - 0.4,
-        duration: 30,
-        useNativeDriver: false,
-      }),
-      Animated.timing(this.heightDrag, {
-        toValue: scalce * maxHeightDrag,
-        duration: 0,
-        useNativeDriver: false,
-      }),
-      Animated.timing(this.heightDragScale, {
-        toValue: scalce,
-        duration: 0,
-        useNativeDriver: false,
-      }),
+      animatedTiming(this.animatedHeight, y, y > heightIntBase ? 15 : 0),
+      animatedTiming(
+        this.animatedBackdropHeight,
+        y > heightIntBase ? appConnect.height : 0,
+        0,
+      ),
+      animatedTiming(this.animatedBackdropOpacity, y / height - 0.4, 0, false),
+      animatedTiming(this.heightDrag, scalce * maxHeightDrag, 0),
+      animatedTiming(this.heightDragScale, scalce, 0),
     ]).start();
     if (y <= heightIntBase && !fullScreen) {
       toggleKeyboard?.(y, false);
@@ -341,16 +273,15 @@ class SelectImage extends Component<IProps, IState> {
     if (!this.detectMove) {
       return;
     }
-    const {scrollEnable} = this.state;
+    const scrollEnable = this.flatList?.getScroll?.();
     if (scrollEnable) {
       return;
     }
     if (!scrollEnable) {
-      this.setState({scrollEnable: true});
+      this.flatList?.enableScroll(true);
     }
     const yChange = this.animatedHeight._value;
-    const {heightInit} = this.state;
-    if (yChange >= (heightInit || initHeight)) {
+    if (yChange >= (this.heightInit || initHeight)) {
       if (this.isUpMove) {
         this.handleOpenModal();
       } else {
@@ -363,116 +294,77 @@ class SelectImage extends Component<IProps, IState> {
 
   handleOpenModal = () => {
     Animated.parallel([
-      Animated.spring(this.animatedHeight, {
-        toValue: this.maxHeightModal,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.animatedBackdropOpacity, {
-        toValue: 0.5,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.heightDrag, {
-        toValue: maxHeightDrag,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.heightDragScale, {
-        toValue: 1,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
+      animatedSpringLayout(this.animatedHeight, this.maxHeightModal),
+      animatedSpringLayout(this.animatedBackdropOpacity, 0.5),
+      animatedSpringLayout(this.heightDrag, maxHeightDrag),
+      animatedSpringLayout(this.heightDragScale, 1),
     ]).start();
   };
 
   handleCloseInit = () => {
-    const {heightInit} = this.state;
     const {fullScreen, toggleKeyboard} = this.props;
-    let heightBase = heightInit || initHeight;
+    let heightBase = this.heightInit || initHeight;
     if (fullScreen) {
       heightBase = 0;
+      this.isOpen = false;
     }
     if (fullScreen) {
-      Animated.timing(this.animatedBackdropHeight, {
-        toValue: 0,
-        useNativeDriver: false,
-        duration: 0,
-      }).start();
+      animatedTiming(this.animatedBackdropHeight, 0).start();
       this.close();
     }
     toggleKeyboard?.(heightBase);
     Animated.parallel([
-      Animated.spring(this.animatedHeight, {
-        toValue: heightBase + bar.navbarHeight,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.animatedBackdropOpacity, {
-        toValue: 0,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.heightDrag, {
-        toValue: 0,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
-      Animated.spring(this.heightDragScale, {
-        toValue: 0,
-        bounciness: 0,
-        overshootClamping: true,
-        useNativeDriver: false,
-      }),
+      animatedSpringLayout(this.animatedHeight, heightBase + bar.navbarHeight),
+      animatedSpringLayout(this.animatedBackdropOpacity, 0),
+      animatedSpringLayout(this.heightDrag, 0),
+      animatedSpringLayout(this.heightDragScale, 0),
     ]).start(({finished}) => {
       if (finished && !fullScreen) {
-        Animated.timing(this.animatedBackdropHeight, {
-          toValue: 0,
-          useNativeDriver: false,
-          duration: 0,
-        }).start();
+        animatedTiming(this.animatedBackdropHeight).start();
       }
     });
   };
 
-  isScrollEnd = ({layoutMeasurement, contentOffset, contentSize}: any) => {
-    const paddingToBottom = 0;
-    return (
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom
-    );
-  };
-
-  handleScroll = ({nativeEvent}: any) => {
-    const {contentOffset} = nativeEvent;
-    this.scrollYNow = contentOffset.y;
-    this.scrollEnd = this.isScrollEnd(nativeEvent);
-  };
-
   handleHideKeyboard = () => {
-    Animated.timing(this.animatedBackdropHeight, {
-      toValue: 0,
-      duration: 0,
-      useNativeDriver: false,
-    }).start();
+    animatedTiming(this.animatedBackdropHeight).start();
   };
 
-  renderItem = ({item}: any) => {
-    const {onSelect} = this.props;
-    return <PreImage onSelect={onSelect} image={item} />;
+  handleSelectImage = (
+    image: any,
+    callback?: any,
+    type: 'add' | 'remove' = 'add',
+  ) => {
+    if (type === 'add') {
+      this.buttonSelect?.setImage?.(image, callback);
+    } else {
+      this.buttonSelect?.removeImage?.(image, callback);
+    }
+  };
+
+  onSubmit = (images: any[]) => {
+    const {onSelectFinish, toggleKeyboard} = this.props;
+    onSelectFinish?.(images);
+    this.close();
+    toggleKeyboard?.(0);
+    Animated.parallel([
+      animatedTiming(this.animatedBackdropHeight, 0),
+      animatedSpringLayout(this.animatedHeight, 0),
+      animatedSpringLayout(this.heightDrag, 0),
+      animatedSpringLayout(this.heightDragScale, 0),
+    ]).start();
+  };
+
+  handlePreview = (
+    image: any,
+    location: {pageX: number; pageY: number},
+    size: number,
+  ) => {
+    this.previewImage?.handlePreview?.(image, location, size);
   };
 
   render() {
     const {width} = appConnect;
-    const {permission, loading, photos, scrollEnable, album, albums} =
-      this.state;
+    const {permission} = this.state;
     const {
       fullScreen,
       backgroundColor = fullScreen ? '#000' : '#fff',
@@ -481,10 +373,13 @@ class SelectImage extends Component<IProps, IState> {
       description,
     } = this.props;
     const colorAlbum = fullScreen ? colorText : '#23071c';
+    const paddingTop = fullScreen ? spaceTopWhenFullScreen : 8;
 
     return (
       <Fragment>
-        <Animated.View
+        <AnimatedBlur
+          blurAmount={100}
+          blurType={fullScreen ? 'light' : 'dark'}
           style={[
             styles.viewBackdrop,
             {
@@ -505,163 +400,65 @@ class SelectImage extends Component<IProps, IState> {
               backgroundColor,
             },
           ]}>
-          <Spin spinning={loading} backgroundColor={backgroundColor}>
-            <ViewMove onMove={this.handleMove} onMoveEnd={this.handleMoveEnd}>
-              <View
-                onTouchStart={() => (this.forceDrag = true)}
-                onTouchEnd={() => (this.forceDrag = false)}
-                style={[
-                  styles.previewDrag,
-                  {width, paddingTop: fullScreen ? spaceTopWhenFullScreen : 8},
-                ]}>
-                {fullScreen ? null : (
-                  <View style={[styles.flexCenter, {width}]}>
-                    <View style={styles.dropDrag} />
-                  </View>
-                )}
-                <Animated.View
-                  style={[
-                    styles.viewListAlbum,
-                    {
-                      width,
-                      height: this.heightDrag,
-                      transform: [{scaleY: this.heightDragScale}],
-                    },
-                  ]}>
-                  <Pressable onPress={this.handleCloseInit}>
-                    <View style={styles.buttonCancel}>
-                      <Text
-                        style={[styles.ml5, styles.fw5, {color: colorText}]}>
-                        {translate({
-                          id: 'screen.list_image.button.cancel',
-                          defaultValue: 'Huỷ',
-                        })}
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <View>
-                    <Text
-                      style={[
-                        styles.textCenter,
-                        styles.textAlbum,
-                        {color: colorAlbum},
-                      ]}>
-                      {album?.title ||
-                        translate({
-                          id: 'screen.list_image.title_image_default',
-                          defaultValue: 'Ảnh',
-                        })}
-                    </Text>
-                    {description ? (
-                      <Text
-                        style={[styles.textCenter, styles.albumDescription]}>
-                        {description}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Pressable
-                    onPress={() => {
-                      this.album?.open?.();
-                    }}>
-                    <View style={[styles.buttonCancel, styles.justiEnd]}>
-                      {permission.isAuthorized ? (
-                        <Text
-                          style={[
-                            styles.pr5,
-                            styles.fw5,
-                            styles.alignRight,
-                            {color: colorText},
-                          ]}>
-                          {translate({
-                            id: 'screen.list_image.button.open_list_album',
-                            defaultValue: 'Album',
-                          })}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                </Animated.View>
-              </View>
-              {permission.isAuthorized ? (
-                <FlatList
-                  getItemLayout={(_data, index) => ({
-                    length: width / 4 - 2,
-                    offset: (width / 4 - 2) * index,
-                    index,
-                  })}
-                  ref={ref => (this.flatList = ref)}
-                  scrollEnabled={scrollEnable}
-                  numColumns={4}
-                  onScroll={this.handleScroll}
-                  scrollEventThrottle={16}
-                  data={photos}
-                  renderItem={this.renderItem}
-                  keyExtractor={item => item.localIdentifier}
-                />
-              ) : (
-                <View style={styles.viewPermission}>
-                  {loading ? null : permission.status === 'notDetermined' ? (
-                    <View style={styles.viewAddPermission}>
-                      <Text
-                        style={[
-                          styles.textCenter,
-                          styles.titleMessagePermission,
-                        ]}>
-                        {translate({
-                          id: 'screen.list_image.title_add_permission_library',
-                          defaultValue:
-                            'Quyền truy cập vào ảnh và video của bạn',
-                        })}
-                      </Text>
-                      <Text style={[styles.textCenter, styles.mb2]}>
-                        {translate({
-                          id: 'screen.list_image.title_add_permission_description1',
-                          defaultValue:
-                            'Cho phép App truy cập vào ảnh và video',
-                        })}
-                      </Text>
-                      <Text style={[styles.textCenter, styles.mb20]}>
-                        {translate({
-                          id: 'screen.list_image.title_add_permission_description2',
-                          defaultValue: 'để bạn có thể chia sẻ với bạn bè',
-                        })}
-                      </Text>
-                      <Pressable onPress={this.handleAuthor}>
-                        <Text
-                          style={[
-                            styles.textCenter,
-                            styles.buttonAddPermission,
-                          ]}>
-                          {translate({
-                            id: 'screen.list_image.button_add_permission',
-                            defaultValue: 'Cho phép truy cập',
-                          })}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  ) : (
-                    <Text>
-                      {translate({
-                        id: 'screen.list_image.permission_library_photo_denied',
-                        defaultValue:
-                          'Vui lòng cấp quyền truy cập Ảnh và Video trong cài đặt',
-                      })}
-                    </Text>
-                  )}
+          <ViewMove onMove={this.handleMove} onMoveEnd={this.handleMoveEnd}>
+            <View
+              onTouchStart={() => (this.forceDrag = true)}
+              onTouchEnd={() => (this.forceDrag = false)}
+              style={[styles.previewDrag, {width, paddingTop}]}>
+              {fullScreen ? null : (
+                <View style={[styles.flexCenter, {width}]}>
+                  <View style={styles.dropDrag} />
                 </View>
               )}
-            </ViewMove>
-          </Spin>
+              <Animated.View
+                style={[
+                  styles.viewListAlbum,
+                  {
+                    width,
+                    height: this.heightDrag,
+                    transform: [{scaleY: this.heightDragScale}],
+                  },
+                ]}>
+                <Extension
+                  ref={ref => (this.extension = ref)}
+                  description={description}
+                  colorAlbum={colorAlbum}
+                  colorText={colorText}
+                  handleCloseInit={this.handleCloseInit}
+                  openAlbum={() => this.album?.open?.()}
+                  permission={permission.isAuthorized}
+                />
+              </Animated.View>
+            </View>
+            {permission.isAuthorized ? (
+              <FlatListImage
+                handlePreview={this.handlePreview}
+                onSelectImage={this.handleSelectImage}
+                ref={ref => (this.flatList = ref)}
+              />
+            ) : null}
+            <Suspense key="permission" fallback={null}>
+              {!permission.isAuthorized ? (
+                <Permission
+                  handleAuthor={this.handleAuthor}
+                  initPermission={permission.status === 'notDetermined'}
+                />
+              ) : null}
+            </Suspense>
+          </ViewMove>
         </Animated.View>
+        <ButtonSelect
+          onSubmit={this.onSubmit}
+          ref={ref => (this.buttonSelect = ref)}
+        />
         <Album
           onSelect={this.handleSelectAlbum}
           colorAlbum={colorAlbum}
           color={colorText}
           backgroundColor={backgroundColor}
-          album={album}
-          albums={albums}
           ref={ref => (this.album = ref)}
         />
+        <PreviewImage ref={ref => (this.previewImage = ref)} />
         <KeyboardListener
           onWillHide={this.handleHideKeyboard}
           onWillShow={this.handleShowKeyboard}
@@ -674,7 +471,6 @@ class SelectImage extends Component<IProps, IState> {
 const styles = StyleSheet.create({
   viewBackdrop: {
     position: 'absolute',
-    backgroundColor: 'rgba(0,0,0,1)',
     bottom: 0,
   },
   viewSelect: {
@@ -710,33 +506,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     flex: 1,
   },
-  viewPermission: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   textCenter: {
     textAlign: 'center',
     color: '#2b1624',
-  },
-  titleMessagePermission: {
-    fontWeight: '600',
-    marginBottom: 10,
-    fontSize: 15,
-  },
-  mb2: {
-    marginBottom: 2,
-  },
-  mb20: {
-    marginBottom: 20,
-  },
-  viewAddPermission: {
-    paddingHorizontal: 30,
-  },
-  buttonAddPermission: {
-    fontWeight: '600',
-    color: '#4378ec',
   },
   viewListAlbum: {
     flexDirection: 'row',
@@ -744,35 +516,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 1,
     overflow: 'hidden',
-  },
-  buttonCancel: {
-    width: 70,
-    height: maxHeightDrag,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ml5: {
-    marginLeft: 15,
-  },
-  pr5: {
-    paddingRight: 15,
-  },
-  w60: {},
-  alignRight: {
-    textAlign: 'right',
-  },
-  textAlbum: {
-    fontWeight: '700',
-    fontSize: 17,
-  },
-  albumDescription: {
-    color: '#aaa4a6',
-  },
-  fw5: {
-    fontWeight: '600',
-  },
-  justiEnd: {
-    justifyContent: 'flex-end',
   },
 });
 

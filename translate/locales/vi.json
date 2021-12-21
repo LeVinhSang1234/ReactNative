@@ -11,5 +11,7 @@
   "screen.list_image.button_add_permission": "Cho phép truy cập",
   "screen.list_image.permission_library_photo_denied": "Vui lòng cấp quyền trong cài đặt",
   "screen.list_album.button.cancel": "Huỷ",
-  "screen.list_album.title": "Chọn Album"
+  "screen.list_album.title": "Chọn Album",
+  "screen.list_image.button_open_setting": "Mở cài đặt",
+  "screen.list_image.button_select_image": "Chọn {{file_number}} tệp"
 }

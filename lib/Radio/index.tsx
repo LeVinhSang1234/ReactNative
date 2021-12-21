@@ -1,3 +1,4 @@
+import {animatedTiming} from '@/utils';
 import React, {Component} from 'react';
 import {Animated, StyleSheet, TouchableOpacity, ViewStyle} from 'react-native';
 
@@ -58,11 +59,7 @@ class Radio extends Component<IProps, IState> {
     if (!checked) {
       toValue = 1;
     }
-    Animated.timing(this.animated, {
-      duration: duration,
-      toValue,
-      useNativeDriver: false,
-    }).start();
+    animatedTiming(this.animated, duration, toValue).start();
     this.setState({checked: !checked});
   };
 
