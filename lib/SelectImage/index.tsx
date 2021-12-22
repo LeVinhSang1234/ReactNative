@@ -311,8 +311,9 @@ class SelectImage extends Component<IProps, IState> {
     if (fullScreen) {
       animatedTiming(this.animatedBackdropHeight, 0).start();
       this.close();
+    } else {
+      toggleKeyboard?.(heightBase);
     }
-    toggleKeyboard?.(heightBase);
     Animated.parallel([
       animatedSpringLayout(this.animatedHeight, heightBase + bar.navbarHeight),
       animatedSpringLayout(this.animatedBackdropOpacity, 0),
@@ -345,7 +346,6 @@ class SelectImage extends Component<IProps, IState> {
     const {onSelectFinish, toggleKeyboard} = this.props;
     onSelectFinish?.(images);
     this.close();
-    toggleKeyboard?.(0);
     Animated.parallel([
       animatedTiming(this.animatedBackdropHeight, 0),
       animatedSpringLayout(this.animatedHeight, 0),

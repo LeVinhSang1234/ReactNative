@@ -69,7 +69,11 @@ class PreviewImage extends Component<IProps, IState> {
     }
     animatedTiming(this.animatedOpacityOption, 0).start();
     await promiseDelayTimingFinished(this.animated, 0, 200, false, 180);
-    this.setState({dataPreview: undefined, loadingVideo: true});
+    this.setState({
+      dataPreview: undefined,
+      loadingVideo: true,
+      video: undefined,
+    });
   };
 
   handlePreview = async (
