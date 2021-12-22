@@ -21,6 +21,7 @@ import {
   StyleSheet,
   TouchableNativeFeedback,
   View,
+  Image,
 } from 'react-native';
 import {CameraType, FlashMode, RNCamera} from 'react-native-camera';
 import {SvgXml} from 'react-native-svg';
@@ -31,7 +32,7 @@ import Zoom from '../ZoomView';
 import SvgSend from '@/assets/img/icon_send.svg';
 import translate from '@/translate';
 import SelectImage from '../SelectImage';
-import Image from './Image';
+import ImagePreview from './Image';
 
 interface IProps {}
 
@@ -57,7 +58,7 @@ class Camera extends Component<IProps, IState> {
   animatedOpacityPointXY: Animated.ValueXY;
   isZoom: boolean;
   selectImage?: SelectImage | null;
-  imagePreviewCamera?: Image | null;
+  imagePreviewCamera?: ImagePreview | null;
 
   constructor(props: IProps) {
     super(props);
@@ -260,21 +261,20 @@ class Camera extends Component<IProps, IState> {
     if (image) {
       return (
         <View style={[styles.view, {width, height}]}>
-          <View style={styles.viewImage}>
-            <Image
-              style={[
-                {
-                  width,
-                  height,
-                  transform: [
-                    {rotate: this.rotateImage(image.deviceOrientation)},
-                  ],
-                },
-              ]}
-              source={{uri: convertUri(image.uri)}}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            style={[
+              styles.view,
+              {
+                width,
+                height,
+                transform: [
+                  {rotate: this.rotateImage(image.deviceOrientation)},
+                ],
+              },
+            ]}
+            source={{uri: convertUri(image.uri)}}
+            resizeMode="contain"
+          />
           <TouchableNativeFeedback
             onPress={() => {
               this.setState({image: undefined});
@@ -385,7 +385,7 @@ class Camera extends Component<IProps, IState> {
             <View style={[styles.previewImage]}>
               <TouchableNativeFeedback onPress={this.handleSelectImage}>
                 <View>
-                  <Image
+                  <ImagePreview
                     style={styles.image}
                     ref={ref => (this.imagePreviewCamera = ref)}
                   />
